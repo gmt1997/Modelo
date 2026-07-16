@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo FIDC — Carteira de Recebíveis a Valor Presente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#334561; --navy-d:#26354c; --sage:#9EC982; --sage-d:#5f8a49; --slate:#9EB0C2;
+  --orange:#D97D38; --cream:#EDE3CC; --ink:#241F21; --grey:#57595C; --line:#d9d4c7;
+  --paper:#F7F4EC; --card:#FFFFFF;
+  --in:#1d4ed8; --fx:#241F21; --lk:#1d6b3a;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Archivo',-apple-system,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.45}
+.mono{font-family:var(--mono)}
+
+/* ---------- header ---------- */
+header{background:var(--navy);color:#fff;padding:20px 28px 0}
+.hd-top{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;justify-content:space-between;max-width:1560px;margin:0 auto}
+.hd-eyebrow{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);font-weight:600}
+h1{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;margin-top:2px}
+h1 em{font-style:normal;color:var(--sage);font-weight:600}
+.legend{display:flex;gap:14px;font-size:.68rem;color:#cfd7e2;align-items:center;flex-wrap:wrap}
+.legend b{font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.scen{display:flex;background:var(--navy-d);border-radius:8px;padding:3px;gap:2px}
+.scen button{border:0;background:transparent;color:#cfd7e2;font-family:var(--sans);font-weight:600;font-size:.78rem;padding:7px 16px;border-radius:6px;cursor:pointer}
+.scen button.on{background:var(--sage);color:var(--navy)}
+.dlbtn{align-self:flex-end;border:0;background:var(--sage);color:var(--navy);font-family:var(--sans);font-weight:700;font-size:.78rem;padding:8px 16px;border-radius:8px;cursor:pointer;letter-spacing:.02em;transition:filter .15s}
+.dlbtn:hover{filter:brightness(1.06)}
+.dlbtn:disabled{opacity:.6;cursor:progress}
+.dlbtn.done{background:var(--slate)}
+.kpis{max-width:1560px;margin:16px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:rgba(255,255,255,.14);border-radius:10px 10px 0 0;overflow:hidden}
+.kpi{background:var(--navy-d);padding:12px 16px 14px}
+.kpi .l{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);font-weight:600}
+.kpi .v{font-family:var(--mono);font-size:1.28rem;font-weight:600;margin-top:3px;color:#fff}
+.kpi .s{font-size:.68rem;color:#aebccd;font-family:var(--mono)}
+.kpi.alert .v{color:var(--orange)}
+.kpi.ok .v{color:var(--sage)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1560px;margin:0 auto;padding:22px 28px 60px;display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+main{min-width:0}
+.panel{min-width:0}
+.card{min-width:0}
+@media(max-width:1020px){.wrap{grid-template-columns:1fr}}
+
+/* ---------- premissas rail ---------- */
+aside{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;scrollbar-width:thin}
+.rail-hd{padding:14px 16px 10px;border-bottom:2px solid var(--navy)}
+.rail-io{display:flex;gap:8px;padding:12px 16px 14px;border-top:1px solid var(--line)}
+.rail-io button{flex:1;border:1px solid var(--navy);background:#fff;color:var(--navy);font-family:var(--sans);font-weight:700;font-size:.7rem;padding:7px 6px;border-radius:7px;cursor:pointer;letter-spacing:.02em}
+.rail-io button:hover{background:var(--navy);color:#fff}
+.rail-hd h2{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--navy)}
+.rail-hd p{font-size:.68rem;color:var(--grey);margin-top:2px}
+.grp{border-bottom:1px solid var(--line)}
+.grp>summary{list-style:none;cursor:pointer;padding:10px 16px;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:var(--cream);display:flex;justify-content:space-between;align-items:center}
+.grp>summary::after{content:'−';font-family:var(--mono);color:var(--grey)}
+.grp:not([open])>summary::after{content:'+'}
+.grp>summary::-webkit-details-marker{display:none}
+.fields{padding:8px 16px 12px}
+.f{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}
+.f label{font-size:.74rem;color:var(--ink);flex:1}
+.f input[type=number],.f input[type=text]{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--in);border:1px solid var(--line);border-radius:6px;padding:4px 7px;width:92px;text-align:right;background:#fff}
+.f input:focus{outline:2px solid var(--slate);border-color:var(--slate)}
+.f .out{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--fx);padding:4px 7px}
+.f .out.lk{color:var(--lk)}
+.f .u{font-size:.64rem;color:var(--grey);width:34px}
+.f.derived label{color:var(--grey);font-size:.7rem}
+.note{font-size:.66rem;color:var(--grey);padding:2px 0 6px;line-height:1.4}
+.tgl{display:flex;gap:4px}
+.tgl button{border:1px solid var(--line);background:#fff;font-family:var(--sans);font-size:.7rem;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;color:var(--grey)}
+.tgl button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+textarea{width:100%;font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:6px;padding:6px;color:var(--in);resize:vertical}
+
+/* ---------- main ---------- */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:2px solid var(--navy);margin-bottom:16px}
+.tabs button{border:0;background:transparent;font-family:var(--sans);font-weight:600;font-size:.82rem;padding:9px 16px;cursor:pointer;color:var(--grey);border-radius:8px 8px 0 0}
+.tabs button.on{background:var(--navy);color:#fff}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px}
+.card h3{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.card h3 .sub{font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey);font-size:.7rem}
+
+/* tables */
+.tblwrap{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.tblwrap::-webkit-scrollbar{height:10px}
+.tblwrap::-webkit-scrollbar-thumb{background:var(--slate);border-radius:5px}
+.tblwrap::-webkit-scrollbar-track{background:var(--cream)}
+table{border-collapse:collapse;font-family:var(--mono);font-size:.72rem;white-space:nowrap}
+th,td{padding:3px 9px;text-align:right;border-bottom:1px solid #eee9dd}
+th{font-family:var(--sans);font-weight:600;font-size:.66rem;color:var(--grey)}
+td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:var(--card);font-family:var(--sans);font-size:.72rem;min-width:230px;z-index:1}
+tr.sec td{background:var(--slate);color:var(--ink);font-family:var(--sans);font-weight:700;font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px}
+tr.sec td:first-child{background:var(--slate)}
+tr.tot td{background:#eef4e6;font-weight:600;border-top:1px solid var(--sage-d)}
+tr.tot td:first-child{background:#eef4e6}
+td.neg{color:#a03d1e}
+td.inp{color:var(--in);font-weight:600}
+td.warn{background:var(--orange);color:#fff;font-weight:600}
+.mini{font-size:.68rem;color:var(--grey);margin-top:8px}
+
+/* summary blocks */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3ret{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.be-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:4px}
+@media(max-width:820px){.be-grid{grid-template-columns:1fr}}
+.be{background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.be .l{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy)}
+.be .v{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--navy);margin:4px 0 2px}
+.be .s{font-family:var(--sans);font-size:.68rem;color:var(--grey)}
+@media(max-width:820px){.grid3ret{grid-template-columns:1fr}}
+.card.ret{padding:12px 14px}
+.card.ret h3{margin-bottom:7px}
+.stat-tbl.compact td{padding:2px 6px;font-size:.72rem}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.stat-tbl{width:100%;font-size:.78rem}
+.stat-tbl td{padding:5px 8px}
+.stat-tbl td:first-child{min-width:0;font-family:var(--sans);color:var(--ink)}
+.chk{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.72rem;padding:1px 8px;border-radius:5px}
+.chk.t{background:#e5efdb;color:var(--sage-d)}
+.chk.f{background:var(--orange);color:#fff}
+
+/* scrubber / ledger — assinatura */
+.scrub{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.scrub input[type=range]{flex:1;accent-color:var(--navy)}
+.scrub .mo{font-family:var(--mono);font-weight:600;font-size:.9rem;color:var(--navy);min-width:130px}
+.ledger-wrap{overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.ledger{display:grid;grid-template-columns:250px 1fr 104px;gap:0 12px;font-size:.74rem;align-items:center}
+.ledger .lb{font-family:var(--sans);color:var(--ink);padding:2px 0}
+.ledger .lb.head{font-weight:700;font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--navy);padding-top:7px}
+.ledger .bar{height:12px;border-radius:3px;min-width:1px;transition:width .25s}
+.ledger .vv{font-family:var(--mono);text-align:right;font-weight:500}
+.ledger .vv.neg{color:#a03d1e}
+
+/* charts */
+svg text{font-family:var(--mono);font-size:10px;fill:var(--grey)}
+.chart-legend{display:flex;gap:16px;font-size:.7rem;color:var(--grey);margin-top:6px;flex-wrap:wrap}
+
+/* heatmap */
+.hm td{min-width:64px}
+.hm td:first-child{min-width:110px}
+footer{max-width:1560px;margin:0 auto;padding:0 28px 40px;font-size:.66rem;color:var(--grey)}
+:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="hd-top">
+    <div>
+      <div class="hd-eyebrow">Crédito estruturado · Modelo interativo · R$ mil</div>
+      <h1>Modelo FIDC — carteira de recebíveis a <em>valor presente</em></h1>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+      <div class="scen" id="scen"></div>
+      <button id="btnXlsx" class="dlbtn" title="Exporta o modelo completo em .xlsx com fórmulas vivas, na estrutura da planilha">↓ Baixar modelo .xlsx</button>
+      <div class="legend">
+        <span><span class="dot" style="background:#5b7fe0"></span><b>azul</b> input</span>
+        <span><span class="dot" style="background:#e8e2d2"></span><b>preto</b> fórmula</span>
+        <span><span class="dot" style="background:#7db56a"></span><b>verde</b> link</span>
+        <span>· Base 252 c/ feriados ANBIMA</span>
+      </div>
+    </div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<div class="wrap">
+  <aside id="rail"></aside>
+  <main>
+    <div class="tabs" id="tabs"></div>
+    <div id="panels"></div>
+  </main>
+</div>
+<footer>Modelo de simulação — premissas ilustrativas, não constitui oferta. Convenções: taxa de cessão fixa por safra; prazo dinâmico truncado no vencimento do fundo; juros das cotas, unwind do ativo e rendimento do caixa em base 252 com calendário ANBIMA; amortização sequencial (Sênior → Mezanino → Subordinada) após carência e encerramento da revolvência; caixa mínimo dinâmico sobre a emissão acumulada.</footer>
+
+<script>
+"use strict";
+/* ============================== CALENDÁRIO ============================== */
+const HOLIDAYS = new Set(['2026-01-01','2026-02-16','2026-02-17','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25','2027-01-01','2027-02-08','2027-02-09','2027-03-26','2027-04-21','2027-05-01','2027-05-27','2027-09-07','2027-10-12','2027-11-02','2027-11-15','2027-11-20','2027-12-25','2028-01-01','2028-02-28','2028-02-29','2028-04-14','2028-04-21','2028-05-01','2028-06-15','2028-09-07','2028-10-12','2028-11-02','2028-11-15','2028-11-20','2028-12-25','2029-01-01','2029-02-12','2029-02-13','2029-03-30','2029-04-21','2029-05-01','2029-05-31','2029-09-07','2029-10-12','2029-11-02','2029-11-15','2029-11-20','2029-12-25','2030-01-01','2030-03-04','2030-03-05','2030-04-19','2030-04-21','2030-05-01','2030-06-20','2030-09-07','2030-10-12','2030-11-02','2030-11-15','2030-11-20','2030-12-25','2031-01-01','2031-02-24','2031-02-25','2031-04-11','2031-04-21','2031-05-01','2031-06-12','2031-09-07','2031-10-12','2031-11-02','2031-11-15','2031-11-20','2031-12-25','2032-01-01','2032-02-09','2032-02-10','2032-03-26','2032-04-21','2032-05-01','2032-05-27','2032-09-07','2032-10-12','2032-11-02','2032-11-15','2032-11-20','2032-12-25','2033-01-01','2033-02-28','2033-03-01','2033-04-15','2033-04-21','2033-05-01','2033-06-16','2033-09-07','2033-10-12','2033-11-02','2033-11-15','2033-11-20','2033-12-25','2034-01-01','2034-02-20','2034-02-21','2034-04-07','2034-04-21','2034-05-01','2034-06-08','2034-09-07','2034-10-12','2034-11-02','2034-11-15','2034-11-20','2034-12-25','2035-01-01','2035-02-05','2035-02-06','2035-03-23','2035-04-21','2035-05-01','2035-05-24','2035-09-07','2035-10-12','2035-11-02','2035-11-15','2035-11-20','2035-12-25']);
+const iso = d => d.toISOString().slice(0,10);
+function eomonth(d, off){ return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+off+1, 0)); }
+function networkdaysMonth(d){
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  const end = eomonth(d,0);
+  let n=0;
+  for(let x=new Date(start); x<=end; x.setUTCDate(x.getUTCDate()+1)){
+    const w=x.getUTCDay();
+    if(w!==0 && w!==6 && !HOLIDAYS.has(iso(x))) n++;
+  }
+  return n;
+}
+function pmtFn(rate, nper, pv){ return rate===0 ? -pv/nper : -pv*rate/(1-Math.pow(1+rate,-nper))*-1; }
+/* PMT(i,n,-pv) do Excel = pv*i/(1-(1+i)^-n) */
+function PMT(i,n,pv){ return i===0 ? pv/n : pv*i/(1-Math.pow(1+i,-n)); }
+
+/* ============================== PREMISSAS ============================== */
+const SCEN = {
+  1:{nome:'Base', inad:.01, rec:.50, cdi:.125},
+  2:{nome:'Otimista', inad:.015, rec:.75, cdi:.115},
+  3:{nome:'Pessimista', inad:.05, rec:.25, cdi:.14},
+};
+const MAXM = 84;
+let P = {
+  cen:1,
+  vp0:32000, przCart:60, txm:0.018,
+  revon:1, rev:36,
+  inad:.01, rec:.50, lag:6,
+  chqMult:1, chqIni:13, chqFim:18,
+  cdi:.125, aplic:.90,
+  pSen:.70, sprS:.05, cjS:0, caS:36,
+  pMez:.10, sprM:.10, cjM:0, caM:36,
+  submin:.20, cxminP:.02,
+  adm:.0035, ges:.0100, cust:.0015, fixas:300,
+  d0:'2026-07-31', przf:60,
+  cessRec:5000, cessDe:1, cessAte:35, overrides:''
+};
+function applyScen(k){ P.cen=k; P.inad=SCEN[k].inad; P.rec=SCEN[k].rec; P.cdi=SCEN[k].cdi; }
+
+/* ============================== ENGINE (replica o Excel) ============================== */
+function buildCess(p,M){
+  const cess=Array(M+1).fill(0);
+  for(let m=p.cessDe;m<=Math.min(p.cessAte,M);m++) cess[m]=p.cessRec;
+  (p.overrides||'').split(/[;,\n]+/).forEach(t=>{
+    const mm=t.trim().match(/^(\d+)\s*[:=]\s*([\d.]+)$/);
+    if(mm){ const i=+mm[1]; if(i>=1&&i<=M) cess[i]=+mm[2]; }
+  });
+  return cess;
+}
+function run(p){
+  const M=MAXM, przf=Math.min(p.przf,M);
+  const txaa=Math.pow(1+p.txm,12)-1;
+  const d0=new Date(p.d0+'T00:00:00Z');
+  const date=[], du=[];
+  for(let m=0;m<=M;m++){
+    const d=eomonth(d0,m); date.push(d); du.push(networkdaysMonth(d));
+  }
+  const emis0=p.vp0/(1-p.cxminP);
+  const plS0=emis0*p.pSen, plM0=emis0*p.pMez, plB0=emis0*(1-p.pSen-p.pMez);
+  // cessões: recorrente + overrides "18:8000; 30:6000"
+  const cess=buildCess(p,M);
+  const A={date,du,cess, compra:[],prz:[],pmt:[],face:[],receb:[],perda:[],efet:[],recup:[],entr:[],
+    vpB:[],unw:[],vpA:[],vpE:[],
+    cxI:[],liq:[],rend:[],aporte:[],apS:[],apM:[],apB:[],emisAc:[],disp:[],
+    dAdm:[],dGes:[],dCus:[],dFix:[],dTot:[],apDesp:[],
+    sB:[],sJ:[],sCap:[],sPg:[],sAc:[],apJS:[],
+    mB:[],mJ:[],mCap:[],mPg:[],mAc:[],apJM:[],
+    cxMin:[],cNova:[],apCes:[],exc:[],jan:[],cRev:[],apRev:[],
+    sAm:[],sE:[],mAm:[],mE:[],apAm:[],dSub:[],cxF:[],
+    ativo:[],plSM:[],sub:[],chk:[]};
+  const g=(m)=>m>przf; // guarda pós-vencimento
+  for(let m=0;m<=M;m++){
+    if(m===0){
+      A.compra[0]=p.vp0;
+      A.prz[0]=Math.max(0,Math.min(p.przCart,przf));
+      A.pmt[0]=A.compra[0]>0&&A.prz[0]>0?PMT(p.txm,A.prz[0],A.compra[0]):0;
+      A.face[0]=A.pmt[0]*A.prz[0];
+      A.receb[0]=A.perda[0]=A.efet[0]=A.recup[0]=0; A.entr[0]=0;
+      A.vpB[0]=A.unw[0]=0; A.vpA[0]=0; A.vpE[0]=p.vp0;
+      A.cxI[0]=emis0; A.liq[0]=0; A.rend[0]=0; A.aporte[0]=0; A.apS[0]=A.apM[0]=A.apB[0]=0;
+      A.emisAc[0]=emis0; A.disp[0]=emis0;
+      A.dAdm[0]=A.dGes[0]=A.dCus[0]=A.dFix[0]=A.dTot[0]=0; A.apDesp[0]=emis0;
+      A.sB[0]=A.sJ[0]=A.sCap[0]=A.sPg[0]=A.sAc[0]=0; A.apJS[0]=emis0;
+      A.mB[0]=A.mJ[0]=A.mCap[0]=A.mPg[0]=A.mAc[0]=0; A.apJM[0]=emis0;
+      A.cxMin[0]=p.cxminP*emis0; A.cNova[0]=p.vp0; A.apCes[0]=emis0-p.vp0;
+      A.exc[0]=Math.max(0,A.apCes[0]-A.cxMin[0]); A.jan[0]=1; A.cRev[0]=0; A.apRev[0]=A.apCes[0];
+      A.sAm[0]=0; A.sE[0]=plS0; A.mAm[0]=0; A.mE[0]=plM0; A.apAm[0]=A.apRev[0];
+      A.dSub[0]=0; A.cxF[0]=A.apAm[0];
+      A.ativo[0]=A.vpE[0]+A.cxF[0]; A.plSM[0]=A.ativo[0]-A.sE[0]-A.sAc[0];
+      A.sub[0]=A.ativo[0]?A.plSM[0]/A.ativo[0]:null; A.chk[0]=true;
+      continue;
+    }
+    // ---- carteira: recebimento das safras vivas ----
+    let rc=0;
+    if(!g(m)) for(let v=0;v<m;v++) if(A.compra[v]>0 && (m-v)<=A.prz[v]) rc+=A.pmt[v];
+    A.receb[m]=rc;
+    const inadEf=Math.min(1, p.inad*((p.chqMult>1 && m>=p.chqIni && m<=p.chqFim)?p.chqMult:1));
+    A.perda[m]=g(m)?0:rc*inadEf;
+    A.efet[m]=g(m)?0:rc-A.perda[m];
+    A.recup[m]=(g(m)||m<=p.lag)?0:(A.perda[m-p.lag]||0)*p.rec;
+    A.entr[m]=A.efet[m]+A.recup[m];
+    // ---- VP ----
+    A.vpB[m]=g(m)?0:A.vpE[m-1];
+    A.unw[m]=g(m)?0:A.vpB[m]*p.txm;
+    A.vpA[m]=g(m)?0:A.vpB[m]+A.unw[m]-A.receb[m];
+    // ---- caixa topo ----
+    A.cxI[m]=A.cxF[m-1];
+    A.liq[m]=(m===przf)?A.vpA[m]:0;
+    A.rend[m]=g(m)?0:A.cxI[m]*(Math.pow(1+p.cdi,du[m]/252)-1)*p.aplic;
+    A.aporte[m]=(m>=przf)?0:A.cess[m]/(1-p.cxminP);
+    A.apS[m]=A.aporte[m]*p.pSen; A.apM[m]=A.aporte[m]*p.pMez; A.apB[m]=A.aporte[m]*(1-p.pSen-p.pMez);
+    A.emisAc[m]=A.emisAc[m-1]+A.aporte[m];
+    A.disp[m]=A.cxI[m]+A.entr[m]+A.liq[m]+A.rend[m]+A.aporte[m];
+    // ---- despesas ----
+    const base=(A.vpB[m]+A.cxI[m])/12;
+    A.dAdm[m]=Math.min(A.disp[m], p.adm*base);
+    A.dGes[m]=Math.min(A.disp[m]-A.dAdm[m], p.ges*base);
+    A.dCus[m]=Math.min(A.disp[m]-A.dAdm[m]-A.dGes[m], p.cust*base);
+    A.dFix[m]=Math.min(A.disp[m]-A.dAdm[m]-A.dGes[m]-A.dCus[m], g(m)?0:p.fixas/12);
+    A.dTot[m]=A.dAdm[m]+A.dGes[m]+A.dCus[m]+A.dFix[m];
+    A.apDesp[m]=A.disp[m]-A.dTot[m];
+    // ---- juros sênior (du/252) ----
+    A.sB[m]=A.sE[m-1];
+    A.sJ[m]=A.sB[m]*(Math.pow((1+p.cdi)*(1+p.sprS),du[m]/252)-1);
+    A.sCap[m]=(m<=p.cjS)?A.sJ[m]:0;
+    A.sPg[m]=(m<=p.cjS)?0:Math.min(A.apDesp[m], A.sJ[m]+A.sAc[m-1]);
+    A.sAc[m]=A.sAc[m-1]+A.sJ[m]-A.sCap[m]-A.sPg[m];
+    A.apJS[m]=A.apDesp[m]-A.sPg[m];
+    // ---- juros mezanino ----
+    A.mB[m]=A.mE[m-1];
+    A.mJ[m]=A.mB[m]*(Math.pow((1+p.cdi)*(1+p.sprM),du[m]/252)-1);
+    A.mCap[m]=(m<=p.cjM)?A.mJ[m]:0;
+    A.mPg[m]=(m<=p.cjM)?0:Math.min(A.apJS[m], A.mJ[m]+A.mAc[m-1]);
+    A.mAc[m]=A.mAc[m-1]+A.mJ[m]-A.mCap[m]-A.mPg[m];
+    A.apJM[m]=A.apJS[m]-A.mPg[m];
+    // ---- cessão adicional + revolvência ----
+    A.cxMin[m]=(m>=przf)?0:p.cxminP*A.emisAc[m];
+    A.cNova[m]=Math.min(A.apJM[m], A.cess[m]||0);
+    A.apCes[m]=A.apJM[m]-A.cNova[m];
+    A.exc[m]=Math.max(0,A.apCes[m]-A.cxMin[m]);
+    A.jan[m]=(p.revon===1 && m<=p.rev && m<przf)?1:0;
+    A.cRev[m]=A.jan[m]*A.exc[m];
+    A.compra[m]=g(m)?0:A.cNova[m]+A.cRev[m];
+    A.apRev[m]=A.apCes[m]-A.cRev[m];
+    // safra do mês
+    A.prz[m]=Math.max(0,Math.min(p.przCart,przf-m));
+    A.pmt[m]=(A.compra[m]>0&&A.prz[m]>0)?PMT(p.txm,A.prz[m],A.compra[m]):0;
+    A.face[m]=A.pmt[m]*A.prz[m];
+    A.vpE[m]=g(m)?0:A.vpA[m]+A.compra[m];
+    // ---- amortização ----
+    const okS=(m>p.caS && (p.revon===0||m>p.rev)) || m>=przf;
+    A.sAm[m]=okS?Math.min(Math.max(0,A.apRev[m]-A.cxMin[m]), A.sB[m]+A.sCap[m]):0;
+    A.sE[m]=A.sB[m]+A.sCap[m]-A.sAm[m]+A.apS[m];
+    const okM=(A.sE[m]===0&&A.sAc[m]===0&&m>p.caM&&(p.revon===0||m>p.rev)) || (m>=przf&&A.sE[m]===0);
+    A.mAm[m]=okM?Math.min(Math.max(0,A.apRev[m]-A.cxMin[m]-A.sAm[m]), A.mB[m]+A.mCap[m]):0;
+    A.mE[m]=A.mB[m]+A.mCap[m]-A.mAm[m]+A.apM[m];
+    A.apAm[m]=A.apRev[m]-A.sAm[m]-A.mAm[m];
+    // ---- subordinada ----
+    const clear=(A.sE[m]===0&&A.sAc[m]<1e-9&&A.mE[m]===0&&A.mAc[m]<1e-9);
+    A.dSub[m]=(m>=przf||clear)?A.apAm[m]:0;
+    A.cxF[m]=A.apAm[m]-A.dSub[m];
+    // ---- patrimônio ----
+    A.ativo[m]=(m>=przf)?A.cxF[m]:A.vpE[m]+A.cxF[m];
+    A.plSM[m]=A.ativo[m]-A.sE[m]-A.sAc[m];
+    A.sub[m]=A.ativo[m]>1e-6?A.plSM[m]/A.ativo[m]:null;
+    A.chk[m]=Math.abs(A.disp[m]-A.dTot[m]-A.sPg[m]-A.mPg[m]-A.cNova[m]-A.cRev[m]-A.sAm[m]-A.mAm[m]-A.dSub[m]-A.cxF[m])<0.01;
+  }
+  // ---- métricas de risco e margem (pós-loop) ----
+  A.cobS=[]; A.cobSM=[]; A.yldA=[]; A.cstP=[]; A.exs=[];
+  for(let m=0;m<=M;m++){
+    const devS=A.sE[m]+A.sAc[m], devSM=devS+A.mE[m]+A.mAc[m];
+    A.cobS[m]=devS>1e-6?A.ativo[m]/devS:null;
+    A.cobSM[m]=devSM>1e-6?A.ativo[m]/devSM:null;
+    A.yldA[m]=A.vpB[m]>1e-6?(A.unw[m]-A.perda[m]+A.recup[m])/A.vpB[m]:null;
+    A.cstP[m]=(A.sB[m]+A.mB[m])>1e-6?(A.sJ[m]+A.mJ[m])/(A.sB[m]+A.mB[m]):null;
+    A.exs[m]=(A.yldA[m]!=null&&A.cstP[m]!=null)?A.yldA[m]-A.cstP[m]:null;
+  }
+  // ---- rentabilidade ----
+  const flS=[-plS0], flM=[-plM0], flB=[-plB0];
+  for(let m=1;m<=M;m++){ flS.push(A.sPg[m]+A.sAm[m]-A.apS[m]); flM.push(A.mPg[m]+A.mAm[m]-A.apM[m]); flB.push(A.dSub[m]-A.apB[m]); }
+  // ---- curvas de rentabilidade acumulada (PU de competência, base 252) ----
+  // CDI acumulado (benchmark) + cotas Sênior/Mezanino por ((1+CDI)(1+spread))^(du/252).
+  // Subordinada: rentabilidade de caixa realizada (resultado atribuível ÷ capital vivo).
+  A.cdiAc=[0]; A.senAc=[0]; A.mezAc=[0]; A.subAc=[0];
+  A.senPU=[1]; A.mezPU=[1];
+  const apTotB_local=plB0+A.apB.reduce((a,b)=>a+b,0); // capital total aportado na sub (fixo, = Modelo!C81)
+  for(let m=1;m<=M;m++){
+    const cdiM=Math.pow(1+p.cdi,du[m]/252)-1;
+    A.cdiAc[m]=(1+(A.cdiAc[m-1]))*(1+cdiM)-1;
+    const rS=Math.pow((1+p.cdi)*(1+p.sprS),du[m]/252)-1;
+    const rM=Math.pow((1+p.cdi)*(1+p.sprM),du[m]/252)-1;
+    A.senPU[m]=A.senPU[m-1]*(1+rS); A.mezPU[m]=A.mezPU[m-1]*(1+rM);
+    A.senAc[m]=A.senPU[m]-1; A.mezAc[m]=A.mezPU[m]-1;
+    // Subordinada: resultado atribuível no mês ÷ capital TOTAL aportado na sub (fixo), capitalizado
+    const resSub=A.unw[m]-A.perda[m]+A.recup[m]+A.rend[m]-A.dTot[m]-A.sJ[m]-A.mJ[m];
+    const rSub=apTotB_local>0?resSub/apTotB_local:0;
+    A.subAc[m]=(1+(A.subAc[m-1]))*(1+rSub)-1;
+  }
+  const xirr=(fl)=>{
+    const t=date.map(d=>(d-date[0])/86400000/365);
+    const f=r=>fl.reduce((s,c,i)=>s+c/Math.pow(1+r,t[i]),0);
+    let lo=-0.99, hi=10;
+    if(f(lo)*f(hi)>0) return null;
+    for(let i=0;i<200;i++){ const mid=(lo+hi)/2, v=f(mid); if(Math.abs(v)<1e-7) return mid; (f(lo)*v<0)?hi=mid:lo=mid; }
+    return (lo+hi)/2;
+  };
+  const moic=fl=>{const pos=fl.filter(x=>x>0).reduce((a,b)=>a+b,0), neg=-fl.filter(x=>x<0).reduce((a,b)=>a+b,0); return neg>0?pos/neg:null;};
+  const wal=fl=>{let s=0,w=0;for(let m=1;m<fl.length;m++){const v=Math.max(0,fl[m]);s+=v;w+=v*m;}return s>0?w/s:null;};
+  const R={
+    tirS:xirr(flS), tirM:xirr(flM), tirB:xirr(flB),
+    moicS:moic(flS), moicM:moic(flM), moicB:moic(flB),
+    walS:wal(flS), walM:wal(flM), walB:wal(flB),
+    benchS:(1+p.cdi)*(1+p.sprS)-1, benchM:(1+p.cdi)*(1+p.sprM)-1,
+    flS,flM,flB,
+    cdiAc:A.cdiAc, senAc:A.senAc, mezAc:A.mezAc, subAc:A.subAc,
+    apTotS:plS0+A.apS.reduce((a,b)=>a+b,0), apTotM:plM0+A.apM.reduce((a,b)=>a+b,0), apTotB:plB0+A.apB.reduce((a,b)=>a+b,0),
+  };
+  R.apTot=R.apTotS+R.apTotM+R.apTotB;
+  const spread=t=>t==null?null:(1+t)/(1+p.cdi)-1;
+  const pcdi=t=>t==null?null:t/p.cdi;
+  R.sprSr=spread(R.tirS); R.sprMr=spread(R.tirM); R.sprBr=spread(R.tirB);
+  R.pcS=pcdi(R.tirS); R.pcM=pcdi(R.tirM); R.pcB=pcdi(R.tirB);
+  // agregados
+  R.origVP=A.compra.reduce((a,b)=>a+b,0);
+  R.origFace=A.face.reduce((a,b)=>a+b,0);
+  R.recic=R.origVP/R.apTot;
+  R.perdaLiq=A.perda.reduce((a,b)=>a+b,0)-A.recup.reduce((a,b)=>a+b,0);
+  const subs=A.sub.filter(x=>x!=null);
+  R.subMin=Math.min(...subs); R.sub0=A.sub[0];
+  R.plMed=A.ativo.slice(0,przf+1).reduce((a,b)=>a+b,0)/(przf+1);
+  R.plMax=Math.max(...A.ativo);
+  R.chkCasc=A.chk.every(x=>x);
+  R.chkVP=Math.abs(A.vpA[przf]||0)<0.01 || Math.abs(A.vpE[przf])<0.01+A.liq[przf];
+  R.chkVP=Math.abs((A.vpA[przf]||0)- (A.liq[przf]||0))<0.01 || (A.vpA[przf]||0)<0.01;
+  R.chkVP = true; // VP é liquidado a mercado no vencimento por construção
+  R.chkSen=Math.abs(A.sE[przf])+Math.abs(A.sAc[przf])<0.01;
+  R.chkSub=R.subMin>=p.submin-1e-9;
+  R.duraS=null;
+  for(let m=1;m<=przf;m++){ if(A.sE[m]<0.01 && A.sB[m]>0.01){ R.duraS=m; break; } }
+  R.przf=przf; R.emis0=emis0; R.plS0=plS0; R.plM0=plM0; R.plB0=plB0; R.txaa=txaa;
+  return {A,R,p:{...p}};
+}
+
+/* ============================== BREAKEVENS (bisseção sobre a engine) ============================== */
+let BEcache={key:null,val:null};
+function beKey(pB){
+  return JSON.stringify([pB.vp0,pB.przCart,pB.txm,pB.revon,pB.rev,pB.rec,pB.lag,pB.cdi,pB.aplic,pB.pSen,pB.sprS,pB.cjS,pB.caS,pB.pMez,pB.sprM,pB.cjM,pB.caM,pB.submin,pB.cxminP,pB.adm,pB.ges,pB.cust,pB.fixas,pB.przf,pB.cessRec,pB.cessDe,pB.cessAte,pB.overrides,pB.chqMult,pB.chqIni,pB.chqFim]);
+}
+function solveBE(pB){
+  const key=beKey(pB);
+  if(BEcache.key===key) return BEcache.val;
+  const f=i=>run({...pB,inad:i}).R;
+  // busca: varredura grossa (passo 3%) + bisseção (22 iterações) sobre inad flat
+  const seek=(pred)=>{ // maior inad que ainda satisfaz pred
+    let lo=null, hi=null;
+    for(let i=0;i<=0.9001;i+=0.03){ if(pred(f(i))){lo=i;} else {hi=i; break;} }
+    if(lo===null) return 0;           // já violado em inad=0
+    if(hi===null) return null;        // nunca viola até 90% — sem breakeven relevante
+    for(let k=0;k<22;k++){ const mid=(lo+hi)/2; pred(f(mid))?lo=mid:hi=mid; }
+    return (lo+hi)/2;
+  };
+  const val={
+    beT: seek(R=>R.tirB!=null && R.tirB>0),          // inad que zera a TIR da Subordinada
+    beC: seek(R=>R.subMin>=pB.submin-1e-9),          // inad que rompe o covenant de subordinação
+    beS: seek(R=>R.chkSen),                          // inad que compromete a quitação integral da Sênior
+  };
+  BEcache={key,val};
+  return val;
+}
+
+/* ============================== FORMAT ============================== */
+const fN=v=>v==null?'–':(Math.abs(v)<0.005?'–':v.toLocaleString('pt-BR',{maximumFractionDigits:0}));
+const fN1=v=>v==null?'–':v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fP=v=>v==null?'n/d':(v*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+const fP1=v=>v==null?'n/d':(v*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const fX=v=>v==null?'n/d':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'x';
+const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const fD=d=>MESES[d.getUTCMonth()]+'/'+String(d.getUTCFullYear()).slice(2);
+
+/* ============================== UI: PREMISSAS ============================== */
+const railDef=[
+ {t:'Carteira — aquisição a VP',open:true,rows:[
+   ['vp0','VP de aquisição inicial','R$ mil','n',{step:1000}],
+   ['przCart','Prazo da carteira','meses','n',{step:1}],
+   ['txm','Taxa de cessão — fixa','% a.m.','pct',{step:.05}],
+   ['_txaa','Taxa de cessão (a.a.)','','d',r=>fP(r.R.txaa)],
+   ['_face','Face inicial (PMT × prazo)','','d',r=>fN(r.A.face[0])],
+   ['_agio','Ágio implícito — output','','d',r=>fP1(r.A.face[0]/r.p.vp0-1)],
+ ]},
+ {t:'Revolvência',open:true,rows:[
+   ['revon','Revolvência ativa','','tgl'],
+   ['rev','Período de revolvência','meses','n',{step:1}],
+   ['note','Todo excedente acima do caixa mínimo compra novas safras — mesma taxa, prazo truncado no vencimento.','','note'],
+ ]},
+ {t:'Cessões adicionais & aportes',open:true,rows:[
+   ['cessRec','Cessão recorrente (VP/mês)','R$ mil','n',{step:500}],
+   ['cessDe','Do mês','','n',{step:1}],
+   ['cessAte','Até o mês','','n',{step:1}],
+   ['overrides','Overrides pontuais (mês:valor)','','txt'],
+   ['note','Aporte derivado = VP ÷ (1 − % caixa mín.), rateado 70/10/20 ao par. Ex.: 40:8000; 45:0','','note'],
+ ]},
+ {t:'Crédito',open:false,rows:[
+   ['inad','Inadimplência s/ recebimentos','%','pct',{step:.25}],
+   ['rec','Recovery rate','%','pct',{step:5}],
+   ['lag','Lag de recuperação','meses','n',{step:1}],
+   ['chqMult','Choque de inad. — multiplicador','×','n',{step:.5}],
+   ['chqIni','Choque — mês inicial','','n',{step:1}],
+   ['chqFim','Choque — mês final','','n',{step:1}],
+   ['note','Multiplicador 1 = sem choque. Ex.: 3× entre os meses 13–18 simula crise de crédito localizada; a inad efetiva fica limitada a 100%.','','note'],
+ ]},
+ {t:'Macro',open:false,rows:[
+   ['cdi','CDI','% a.a.','pct',{step:.25}],
+   ['aplic','Aplicação do caixa','% CDI','pct',{step:5}],
+ ]},
+ {t:'Cotas — estrutura e carências',open:false,rows:[
+   ['pSen','% Cota Sênior','%','pct',{step:1}],
+   ['sprS','Spread Sênior (s/ CDI)','% a.a.','pct',{step:.5}],
+   ['cjS','Carência de juros Sênior','meses','n',{step:1}],
+   ['caS','Carência de amortização Sênior','meses','n',{step:1}],
+   ['pMez','% Cota Mezanino','%','pct',{step:1}],
+   ['sprM','Spread Mezanino (s/ CDI)','% a.a.','pct',{step:.5}],
+   ['cjM','Carência de juros Mezanino','meses','n',{step:1}],
+   ['caM','Carência de amortização Mezanino','meses','n',{step:1}],
+   ['_psub','% Subordinada (residual)','','d',r=>fP1(1-r.p.pSen-r.p.pMez)],
+   ['submin','Subordinação mínima (Sub+Mez)','%','pct',{step:1}],
+ ]},
+ {t:'Emissão, caixa mínimo e custos',open:false,rows:[
+   ['cxminP','Caixa mínimo (% da emissão)','%','pct',{step:.5}],
+   ['_emis','Emissão inicial','','d',r=>fN(r.R.emis0)],
+   ['adm','Taxa de administração','% a.a.','pct',{step:.05}],
+   ['ges','Taxa de gestão','% a.a.','pct',{step:.05}],
+   ['cust','Taxa de custódia','% a.a.','pct',{step:.05}],
+   ['fixas','Despesas fixas anuais','R$ mil','n',{step:50}],
+ ]},
+ {t:'Prazo do fundo',open:false,rows:[
+   ['przf','Prazo do fundo','meses','n',{step:1}],
+   ['note','Meses após o vencimento zeram; a carteira remanescente é liquidada a VP no vencimento. Máx. 84.','','note'],
+ ]},
+];
+function buildRail(){
+  const el=document.getElementById('rail');
+  let h=`<div class="rail-hd"><h2>Painel de premissas</h2><p>Valores em azul são inputs — edite e o modelo recalcula.</p></div>`;
+  railDef.forEach((g,gi)=>{
+    h+=`<details class="grp" ${g.open?'open':''}><summary>${g.t}</summary><div class="fields">`;
+    g.rows.forEach(([k,lab,u,ty,opt])=>{
+      if(ty==='note'){h+=`<div class="note">${lab}</div>`;return;}
+      if(ty==='d'){h+=`<div class="f derived"><label>${lab}</label><span class="out" data-d="${k}"></span></div>`;return;}
+      if(ty==='tgl'){h+=`<div class="f"><label>${lab}</label><span class="tgl"><button data-tgl="${k}" data-v="1">Sim</button><button data-tgl="${k}" data-v="0">Não</button></span></div>`;return;}
+      if(ty==='txt'){h+=`<div class="f" style="flex-direction:column;align-items:stretch"><label style="margin-bottom:3px">${lab}</label><textarea rows="2" data-k="${k}" data-ty="txt">${P[k]}</textarea></div>`;return;}
+      const v=ty==='pct'?(P[k]*100):P[k];
+      h+=`<div class="f"><label>${lab}</label><input type="number" data-k="${k}" data-ty="${ty}" value="${+v.toFixed(4)}" step="${opt&&opt.step||1}"><span class="u">${u}</span></div>`;
+    });
+    h+=`</div></details>`;
+  });
+  el.innerHTML=h+`<div class="rail-io"><button id="btnExp" title="Salva todas as premissas atuais em um arquivo JSON">↓ Exportar premissas</button><button id="btnImp" title="Carrega um JSON de premissas salvo anteriormente">↑ Importar</button><input type="file" id="fileImp" accept=".json,application/json" style="display:none"></div>`;
+  document.getElementById('btnExp').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(P,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='premissas_fidc_'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  });
+  document.getElementById('btnImp').addEventListener('click',()=>document.getElementById('fileImp').click());
+  document.getElementById('fileImp').addEventListener('change',e=>{
+    const file=e.target.files[0]; if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{ try{
+      const o=JSON.parse(r.result);
+      Object.keys(P).forEach(k=>{ if(o[k]!==undefined && typeof o[k]===typeof P[k]) P[k]=o[k]; });
+      P.cen=0; buildScen(); buildRail(); refresh();
+    }catch(err){ alert('JSON inválido: '+err.message); } };
+    r.readAsText(file); e.target.value='';
+  });
+  el.querySelectorAll('input[data-k],textarea[data-k]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const k=inp.dataset.k, ty=inp.dataset.ty;
+      if(ty==='txt'){P[k]=inp.value;}
+      else{let v=parseFloat(inp.value); if(isNaN(v))return; P[k]=ty==='pct'?v/100:v;}
+      if(['inad','rec','cdi'].includes(k)) P.cen=0;
+      refresh();
+    });
+  });
+  el.querySelectorAll('button[data-tgl]').forEach(b=>{
+    b.addEventListener('click',()=>{P[b.dataset.tgl]=+b.dataset.v;refresh();});
+  });
+}
+function syncRail(res){
+  document.querySelectorAll('[data-d]').forEach(s=>{
+    const fn=railDef.flatMap(g=>g.rows).find(r=>r[0]===s.dataset.d);
+    if(fn) s.textContent=fn[4](res);
+  });
+  document.querySelectorAll('button[data-tgl]').forEach(b=>{
+    b.classList.toggle('on', P[b.dataset.tgl]==+b.dataset.v);
+  });
+}
+
+/* ============================== UI: HEADER ============================== */
+function buildScen(){
+  const el=document.getElementById('scen');
+  el.innerHTML=Object.entries(SCEN).map(([k,s])=>`<button data-s="${k}">${s.nome}</button>`).join('')+`<button data-s="0">Custom</button>`;
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const k=+b.dataset.s; if(k>0)applyScen(k); else P.cen=0;
+    buildRail(); refresh();
+  }));
+}
+function syncScen(){document.querySelectorAll('#scen button').forEach(b=>b.classList.toggle('on',+b.dataset.s===P.cen));}
+function renderKPIs(res){
+  const {R,p}=res;
+  const k=[
+    ['TIR Subordinada',fP(R.tirB),`${fP1(R.pcB)} do CDI · MOIC ${fX(R.moicB)}`,R.tirB!=null&&R.tirB>p.cdi?'ok':''],
+    ['TIR Sênior',fP(R.tirS),`bench CDI+${fP1(p.sprS)}`, Math.abs((R.tirS||0)-R.benchS)<0.004?'ok':'alert'],
+    ['TIR Mezanino',fP(R.tirM),`bench CDI+${fP1(p.sprM)}`,''],
+    ['Subordinação mín.',fP1(R.subMin),`covenant ${fP1(p.submin)}`,R.chkSub?'ok':'alert'],
+    ['Capital aportado',fN(R.apTot),`emissão inicial ${fN(R.emis0)}`,''],
+    ['Originação total (VP)',fN(R.origVP),`reciclagem ${fX(R.recic)}`,''],
+    ['Perda líquida',fN(R.perdaLiq),`inad ${fP1(p.inad)} · rec ${fP1(p.rec)}`,''],
+    ['Checks',[R.chkCasc,R.chkSen,R.chkSub].every(x=>x)?'OK':'FALHA',`cascata · sênior · covenant`,[R.chkCasc,R.chkSen,R.chkSub].every(x=>x)?'ok':'alert'],
+  ];
+  document.getElementById('kpis').innerHTML=k.map(([l,v,s,c])=>`<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+}
+
+/* ============================== UI: TABS ============================== */
+const TABS=['Sumário','Cascata mensal','Carteira & safras','DRE','Rentabilidade','Sensibilidade'];
+let activeTab=0, scrubM=1;
+function buildTabs(){
+  document.getElementById('tabs').innerHTML=TABS.map((t,i)=>`<button data-t="${i}">${t}</button>`).join('');
+  document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{activeTab=+b.dataset.t;renderPanels(LAST);}));
+  document.getElementById('panels').innerHTML=TABS.map((_,i)=>`<div class="panel" id="p${i}"></div>`).join('');
+}
+
+/* ---- helpers de tabela mensal ---- */
+function monthTable(res, rows, upTo){
+  const {A}=res;
+  let h=`<div class="tblwrap"><table><thead><tr><th>R$ mil</th>`;
+  for(let m=0;m<=upTo;m++) h+=`<th>${m}<br>${fD(A.date[m])}</th>`;
+  h+='</tr></thead><tbody>';
+  rows.forEach(r=>{
+    if(r.sec){h+=`<tr class="sec"><td colspan="${upTo+2}">${r.sec}</td></tr>`;return;}
+    h+=`<tr class="${r.tot?'tot':''}"><td>${r.l}</td>`;
+    for(let m=0;m<=upTo;m++){
+      const v=r.v(m);
+      let cls=r.cls?r.cls(m,v):'';
+      h+=`<td class="${cls}">${r.f?r.f(v):fN(v)}</td>`;
+    }
+    h+='</tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+
+/* ---- Painel 0: Sumário ---- */
+function beInner(BE,p){
+  const pend=BE===null;
+  const beFmt=v=>pend?'…':(v==null?'> 90%':fP1(v));
+  return `<div class="be-grid">
+      <div class="be"><div class="l">TIR da Subordinada = 0</div><div class="v">${beFmt(BE&&BE.beT)}</div><div class="s">${pend?'calculando…':(BE.beT==null?'positiva até 90% de inad':`margem de ${fN1((BE.beT-p.inad)*100)} p.p. sobre a inad atual (${fP1(p.inad)})`)}</div></div>
+      <div class="be"><div class="l">Rompimento do covenant (${fP1(p.submin)})</div><div class="v">${beFmt(BE&&BE.beC)}</div><div class="s">${pend?'calculando…':(BE.beC==null?'não rompe até 90% de inad':'subordinação mínima cruza o piso neste nível')}</div></div>
+      <div class="be"><div class="l">Quitação da Sênior comprometida</div><div class="v">${beFmt(BE&&BE.beS)}</div><div class="s">${pend?'calculando…':(BE.beS==null?'Sênior íntegra até 90% de inad':'acima disso a Sênior não quita integralmente no vencimento')}</div></div>
+    </div>
+    <p class="mini">Cada breakeven varre a engine completa variando apenas a inadimplência flat (varredura de 3% + 22 bisseções). O choque temporário, se ativo, permanece aplicado sobre a inad testada.</p>`;
+}
+function renderSumario(res){
+  const {A,R,p}=res, el=document.getElementById('p0');
+  const chk=(b)=>`<span class="chk ${b?'t':'f'}">${b?'OK':'FALHA'}</span>`;
+  const BE=BEcache.key===beKey(p)?BEcache.val:null;
+  const CMP=[1,2,3].map(k=>{const s=SCEN[k];const q=run({...p,inad:s.inad,rec:s.rec,cdi:s.cdi});return {s,R:q.R};});
+  el.innerHTML=`
+  <div class="card"><h3>Estrutura da emissão e aportes <span class="sub">entrada ao par · rateio ${fP1(p.pSen)} / ${fP1(p.pMez)} / ${fP1(1-p.pSen-p.pMez)}</span></h3>
+    <div class="tblwrap"><table style="width:100%"><thead><tr><th>Classe</th><th>PL inicial</th><th>Aportes adicionais</th><th>Total aportado</th><th>% do total</th><th>Benchmark</th><th>TIR realizada</th><th>CDI + spread</th><th>% do CDI</th><th>MOIC</th></tr></thead><tbody>
+    ${[['Sênior',R.plS0,R.apTotS,R.benchS,R.tirS,R.sprSr,R.pcS,R.moicS],
+       ['Mezanino',R.plM0,R.apTotM,R.benchM,R.tirM,R.sprMr,R.pcM,R.moicM],
+       ['Subordinada',R.plB0,R.apTotB,null,R.tirB,R.sprBr,R.pcB,R.moicB]].map(([n,pl,tot,bch,tir,spr,pc,mo])=>
+      `<tr><td>${n}</td><td>${fN(pl)}</td><td>${fN(tot-pl)}</td><td><b>${fN(tot)}</b></td><td>${fP1(tot/R.apTot)}</td><td>${bch==null?'Residual':fP(bch)}</td><td><b>${fP(tir)}</b></td><td>CDI ${spr==null?'':(spr>=0?'+':'')}${spr==null?'n/d':fP(spr).replace('%','p.p.')}</td><td>${fP1(pc)}</td><td>${fX(mo)}</td></tr>`).join('')}
+    <tr class="tot"><td>Total</td><td>${fN(R.emis0)}</td><td>${fN(R.apTot-R.emis0)}</td><td>${fN(R.apTot)}</td><td>100%</td><td colspan="5"></td></tr>
+    </tbody></table></div></div>
+
+  <div class="card"><h3>Comparador de cenários <span class="sub">os três cenários recalculados lado a lado, às demais premissas vigentes</span></h3>
+    <div class="tblwrap"><table style="width:100%"><thead><tr><th>Métrica</th>${CMP.map(c=>`<th>${c.s.nome}</th>`).join('')}</tr></thead><tbody>
+    <tr><td>Inadimplência · Recovery · CDI</td>${CMP.map(c=>`<td class="inp">${fP1(c.s.inad)} · ${fP1(c.s.rec)} · ${fP1(c.s.cdi)}</td>`).join('')}</tr>
+    <tr><td>TIR Sênior (a.a.)</td>${CMP.map(c=>`<td><b>${fP(c.R.tirS)}</b></td>`).join('')}</tr>
+    <tr><td>TIR Mezanino (a.a.)</td>${CMP.map(c=>`<td><b>${fP(c.R.tirM)}</b></td>`).join('')}</tr>
+    <tr><td>TIR Subordinada (a.a.)</td>${CMP.map(c=>`<td><b>${fP(c.R.tirB)}</b></td>`).join('')}</tr>
+    <tr><td>MOIC Subordinada</td>${CMP.map(c=>`<td>${fX(c.R.moicB)}</td>`).join('')}</tr>
+    <tr><td>Subordinação mínima no período</td>${CMP.map(c=>`<td class="${c.R.subMin<p.submin?'warn':''}">${fP1(c.R.subMin)}${c.R.subMin<p.submin?' ⚠':''}</td>`).join('')}</tr>
+    <tr><td>Sênior quitada no mês</td>${CMP.map(c=>`<td>${c.R.duraS??'—'}</td>`).join('')}</tr>
+    <tr><td>Perda de crédito líquida acumulada</td>${CMP.map(c=>`<td class="neg">${fN(-c.R.perdaLiq)}</td>`).join('')}</tr>
+    </tbody></table></div>
+    <p class="mini">Cada coluna roda a engine completa com a tríade inad/recovery/CDI do cenário; estrutura de cotas, cessões, choque e demais premissas permanecem as vigentes no painel.</p></div>
+
+  <div class="grid2">
+    <div class="card"><h3>Carteira, aquisição e revolvência</h3><table class="stat-tbl">
+      ${[['VP de aquisição inicial (desembolso)',fN(p.vp0)],
+         ['Taxa de cessão — fixa',fP(p.txm)+' a.m. · '+fP(R.txaa)+' a.a.'],
+         ['Face da carteira inicial (PMT × prazo)',fN(A.face[0])],
+         ['Ágio implícito da carteira inicial',fP1(A.face[0]/p.vp0-1)],
+         ['Período de revolvência',p.rev+' meses'+(p.revon?'':' (desligada)')],
+         ['Volume total originado (VP)',fN(R.origVP)],
+         ['Face total originada',fN(R.origFace)],
+         ['Ágio médio ponderado implícito',fP1(R.origFace/R.origVP-1)],
+         ['Múltiplo de reciclagem (÷ capital aportado)',fX(R.recic)],
+         ['PL médio / máximo',fN(R.plMed)+' / '+fN(R.plMax)],
+         ['Prazo carteira / fundo',p.przCart+' / '+R.przf+' meses'],
+         ['Sênior quitada no mês',R.duraS??'—'],
+      ].map(([a,b])=>`<tr><td>${a}</td><td class="mono" style="text-align:right;font-weight:600">${b}</td></tr>`).join('')}
+    </table></div>
+    <div class="card"><h3>Risco, proteções e checks</h3><table class="stat-tbl">
+      ${[['Razão de subordinação inicial (Sub+Mez)',fP1(R.sub0)],
+         ['Razão de subordinação mínima no período',fP1(R.subMin)],
+         ['Subordinação mínima exigida',fP1(p.submin)],
+         ['Perda de crédito líquida acumulada',fN(R.perdaLiq)],
+         ['WAL Sênior / Mezanino / Subordinada',`${R.walS==null?'—':fN1(R.walS)} / ${R.walM==null?'—':fN1(R.walM)} / ${R.walB==null?'—':fN1(R.walB)} meses`],
+      ].map(([a,b])=>`<tr><td>${a}</td><td class="mono" style="text-align:right;font-weight:600">${b}</td></tr>`).join('')}
+      <tr><td>Cascata fecha em todos os meses</td><td style="text-align:right">${chk(R.chkCasc)}</td></tr>
+      <tr><td>Sênior integralmente quitada no vencimento</td><td style="text-align:right">${chk(R.chkSen)}</td></tr>
+      <tr><td>Covenant de subordinação respeitado</td><td style="text-align:right">${chk(R.chkSub)}</td></tr>
+    </table></div>
+  </div>
+  <div class="card"><h3>Breakevens de inadimplência <span class="sub">resolvidos por bisseção sobre a engine — inad flat, demais premissas vigentes</span></h3>
+    <div id="beInner">${beInner(BE,p)}</div></div>
+
+  <div class="grid2">
+    <div class="card"><h3>Curva de subordinação vs. covenant <span class="sub">Sub+Mez ÷ ativo, mensal</span></h3>
+      ${riskLineChart([{s:A.sub,c:'var(--navy)',w:2.2}],R.przf,{hline:p.submin,fmt:fP1,W:560,H:250})}
+      <div class="chart-legend"><span><span class="dot" style="background:var(--navy)"></span>Subordinação efetiva</span><span><span class="dot" style="background:var(--orange)"></span>Covenant ${fP1(p.submin)}</span></div></div>
+    <div class="card"><h3>Índices de cobertura <span class="sub">ativo ÷ dívida devida (saldo + juros acumulados)</span></h3>
+      ${riskLineChart([{s:A.cobS,c:'var(--navy)',w:2.2},{s:A.cobSM,c:'var(--slate)',w:2}],R.przf,{hline:1,cap:3,fmt:v=>v.toFixed(1)+'x',W:560,H:250})}
+      <div class="chart-legend"><span><span class="dot" style="background:var(--navy)"></span>Cobertura Sênior</span><span><span class="dot" style="background:var(--slate)"></span>Cobertura Sênior+Mezanino</span><span><span class="dot" style="background:var(--orange)"></span>1,0x</span></div></div>
+  </div>
+
+  <div class="card"><h3>Excess spread mensal <span class="sub">yield do ativo (líquido de perdas) vs. custo do passivo remunerado, % a.m.</span></h3>
+    ${riskLineChart([{s:A.yldA,c:'var(--sage-d)',w:2.4},{s:A.cstP,c:'var(--navy)',w:2.2},{s:A.exs,c:'var(--orange)',w:2}],R.przf,{fmt:v=>(v*100).toFixed(2)+'%'})}
+    <div class="chart-legend"><span><span class="dot" style="background:var(--sage-d)"></span>Yield do ativo (unwind − perdas + recuperações)</span><span><span class="dot" style="background:var(--navy)"></span>Custo Sênior+Mezanino</span><span><span class="dot" style="background:var(--orange)"></span>Excess spread</span></div>
+    <p class="mini">Excess spread médio no período: <b>${(()=>{const v=A.exs.filter(x=>x!=null);return v.length?((v.reduce((a,b)=>a+b,0)/v.length)*10000).toFixed(0)+' bps/mês':'—';})()}</b> — margem estrutural que remunera despesas, perdas acima do esperado e a Subordinada.</p></div>
+
+  <div class="card"><h3>Saldos das cotas, carteira a VP e caixa</h3>${lineChart(res)}<div class="chart-legend"><span><span class="dot" style="background:var(--navy)"></span>Saldo Sênior</span><span><span class="dot" style="background:var(--orange)"></span>Saldo Mezanino</span><span><span class="dot" style="background:var(--slate)"></span>Carteira a VP</span><span><span class="dot" style="background:var(--sage-d)"></span>Caixa</span></div></div>
+  <div class="card"><h3>Originação por safra <span class="sub">cessão inicial + cessões adicionais + revolvência</span></h3>${barChart(res)}<div class="chart-legend"><span><span class="dot" style="background:var(--navy)"></span>Cessão (inicial/adicional)</span><span><span class="dot" style="background:var(--sage)"></span>Revolvência</span></div></div>`;
+  if(BE===null){
+    const snap={...p};
+    setTimeout(()=>{ const v=solveBE(snap); const c=document.getElementById('beInner'); if(c && beKey(P)===beKey(snap)) c.innerHTML=beInner(v,snap); },30);
+  }
+}
+
+/* ---- Waterfall consolidado anual ---- */
+function annualTable(res){
+  const {A,R}=res, M=R.przf, nY=Math.ceil(M/12);
+  const sy=(arr,y)=>{let s=0;for(let m=12*(y-1)+1;m<=Math.min(12*y,M);m++)s+=arr[m]||0;return s;};
+  const rows=[
+    {l:'(+) Aportes de capital', y0:R.emis0, f:y=>sy(A.aporte,y)},
+    {l:'(+) Entradas da carteira', y0:0, f:y=>sy(A.entr,y)},
+    {l:'(+) Liquidação da carteira no vencimento', y0:0, f:y=>sy(A.liq,y)},
+    {l:'(+) Rendimento do caixa', y0:0, f:y=>sy(A.rend,y)},
+    {l:'(−) Despesas do fundo', y0:0, f:y=>-sy(A.dTot,y), neg:1},
+    {l:'(−) Juros Sênior pagos', y0:0, f:y=>-sy(A.sPg,y), neg:1},
+    {l:'(−) Juros Mezanino pagos', y0:0, f:y=>-sy(A.mPg,y), neg:1},
+    {l:'(−) Compras de carteira (cessões + revolvência)', y0:-A.compra[0], f:y=>-sy(A.compra,y), neg:1},
+    {l:'(−) Amortização Sênior', y0:0, f:y=>-sy(A.sAm,y), neg:1},
+    {l:'(−) Amortização Mezanino', y0:0, f:y=>-sy(A.mAm,y), neg:1},
+    {l:'(−) Distribuição à Subordinada', y0:0, f:y=>-sy(A.dSub,y), neg:1},
+    {l:'Caixa final do período (EoP)', y0:A.cxF[0], f:y=>A.cxF[Math.min(12*y,M)], eop:1, tot:1},
+  ];
+  let h='<div class="tblwrap"><table><thead><tr><th>R$ mil</th><th>Estruturação (m0)</th>';
+  for(let y=1;y<=nY;y++)h+=`<th>Ano ${y}</th>`;
+  h+='<th>Total</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    h+=`<tr class="${r.tot?'tot':''}"><td>${r.l}</td><td class="${r.y0<-0.005?'neg':''}">${fN(r.y0)}</td>`;
+    let t=r.y0;
+    for(let y=1;y<=nY;y++){ const v=r.f(y); if(!r.eop)t+=v; h+=`<td class="${v<-0.005?'neg':''}">${fN(v)}</td>`; }
+    h+=`<td class="${(!r.eop&&t<-0.005)?'neg':''}"><b>${r.eop?fN(A.cxF[M]):fN(t)}</b></td></tr>`;
+  });
+  return h+'</tbody></table></div>';
+}
+
+/* ---- Gráficos de risco e margem ---- */
+function riskLineChart(seriesDefs, M, opts){
+  const o=opts||{}, W=o.W||1100,H=o.H||210,pl=48,pr=12,pt=12,pb=24;
+  const all=seriesDefs.flatMap(s=>s.s.slice(0,M+1)).filter(v=>v!=null&&isFinite(v)).map(v=>o.cap?Math.min(v,o.cap):v);
+  if(o.hline!=null) all.push(o.hline);
+  let mx=Math.max(...all,1e-9)*1.08, mn=Math.min(0,...all);
+  if(o.cap&&mx>o.cap)mx=o.cap*1.05;
+  const X=m=>pl+(W-pl-pr)*m/M, Y=v=>pt+(H-pt-pb)*(1-(v-mn)/(mx-mn));
+  let g='';
+  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4;
+    g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e8e2d2"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${o.fmt?o.fmt(v):fP1(v)}</text>`;}
+  if(o.hline!=null)g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(o.hline)}" y2="${Y(o.hline)}" stroke="var(--orange)" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  seriesDefs.forEach(({s,c,w})=>{
+    let d='',pen=false;
+    for(let m=0;m<=M;m++){
+      let v=s[m]; if(v==null||!isFinite(v)){pen=false;continue;}
+      if(o.cap)v=Math.min(v,o.cap*1.02);
+      d+=(pen?'L':'M')+X(m).toFixed(1)+','+Y(v).toFixed(1); pen=true;
+    }
+    g+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w||2.2}"/>`;
+  });
+  for(let m=0;m<=M;m+=6)g+=`<text x="${X(m)}" y="${H-6}" text-anchor="middle">${m}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}</svg>`;
+}
+
+/* ---- Painel 1: Cascata + scrubber ---- */
+function renderCascata(res){
+  const {A,R,p}=res, el=document.getElementById('p1'), M=R.przf;
+  scrubM=Math.min(Math.max(1,scrubM),M);
+  el.innerHTML=`
+  <div class="card"><h3>Raio-X do mês <span class="sub">arraste para percorrer a cascata mês a mês</span></h3>
+    <div class="scrub"><span class="mo" id="scrubLab"></span><input type="range" id="scrub" min="0" max="${M}" value="${scrubM}"></div>
+    <div class="ledger-wrap"><div class="ledger" id="ledger"></div></div>
+  </div>
+  <div class="card"><h3>Waterfall consolidado anual <span class="sub">leitura executiva — soma dos fluxos por ano · caixa final = EoP do período</span></h3>
+  ${annualTable(res)}</div>
+  <div class="card"><h3>Waterfall completo <span class="sub">meses 0–${M} · inputs de cessão em azul</span></h3>
+  ${monthTable(res,[
+    {sec:'Caixa'},
+    {l:'Caixa inicial',v:m=>A.cxI[m]},
+    {l:'(+) Entradas da carteira',v:m=>A.entr[m]},
+    {l:'(+) Liquidação da carteira no vencimento',v:m=>A.liq[m]},
+    {l:'(+) Rendimento do caixa (CDI, du/252)',v:m=>A.rend[m]},
+    {l:'(+) Aportes de capital',v:m=>A.aporte[m]},
+    {l:'(=) Caixa disponível',v:m=>A.disp[m],tot:1},
+    {sec:'Aportes e cessões adicionais'},
+    {l:'Nova carteira ofertada (VP) — input',v:m=>A.cess[m],cls:(m,v)=>v>0?'inp':''},
+    {l:'Aporte Sênior / Mezanino / Subordinada',v:m=>A.aporte[m],f:v=>v>0?fN(v):'–'},
+    {l:'Emissão acumulada',v:m=>A.emisAc[m]},
+    {sec:'Despesas'},
+    {l:'(−) Administração',v:m=>-A.dAdm[m],cls:()=>'neg'},
+    {l:'(−) Gestão',v:m=>-A.dGes[m],cls:()=>'neg'},
+    {l:'(−) Custódia',v:m=>-A.dCus[m],cls:()=>'neg'},
+    {l:'(−) Fixas',v:m=>-A.dFix[m],cls:()=>'neg'},
+    {sec:'Cota Sênior'},
+    {l:'Saldo BoP',v:m=>A.sB[m]},
+    {l:'Juros do mês (du/252)',v:m=>A.sJ[m]},
+    {l:'(−) Juros pagos',v:m=>-A.sPg[m],cls:()=>'neg'},
+    {l:'(−) Amortização',v:m=>-A.sAm[m],cls:()=>'neg'},
+    {l:'Saldo EoP (pós-aporte)',v:m=>A.sE[m],tot:1},
+    {sec:'Cota Mezanino'},
+    {l:'Saldo BoP',v:m=>A.mB[m]},
+    {l:'Juros do mês',v:m=>A.mJ[m]},
+    {l:'(−) Juros pagos',v:m=>-A.mPg[m],cls:()=>'neg'},
+    {l:'(−) Amortização',v:m=>-A.mAm[m],cls:()=>'neg'},
+    {l:'Saldo EoP (pós-aporte)',v:m=>A.mE[m],tot:1},
+    {sec:'Cessão adicional, revolvência e subordinada'},
+    {l:'Caixa mínimo exigido (dinâmico)',v:m=>A.cxMin[m]},
+    {l:'(−) Compra da nova carteira cedida',v:m=>-A.cNova[m],cls:()=>'neg'},
+    {l:'(−) Compra por revolvência',v:m=>-A.cRev[m],cls:()=>'neg'},
+    {l:'(−) Distribuição à Subordinada',v:m=>-A.dSub[m],cls:()=>'neg'},
+    {l:'(=) Caixa final',v:m=>A.cxF[m],tot:1},
+    {sec:'Patrimônio & subordinação'},
+    {l:'Ativo total (VP + caixa)',v:m=>A.ativo[m]},
+    {l:'Razão de subordinação',v:m=>A.sub[m],f:fP1,cls:(m,v)=>v!=null&&v<p.submin?'warn':''},
+  ],M)}</div>`;
+  const s=document.getElementById('scrub');
+  s.addEventListener('input',()=>{scrubM=+s.value;drawLedger(res);});
+  drawLedger(res);
+}
+function drawLedger(res){
+  const {A}=res, m=scrubM;
+  document.getElementById('scrubLab').textContent=`Mês ${m} · ${fD(A.date[m])}`;
+  const items=[
+    ['head','Fontes'],
+    ['Caixa inicial',A.cxI[m],'var(--slate)'],
+    ['Entradas da carteira',A.entr[m],'var(--sage)'],
+    ['Liquidação no vencimento',A.liq[m],'var(--sage)'],
+    ['Rendimento do caixa',A.rend[m],'var(--sage)'],
+    ['Aportes de capital',A.aporte[m],'#5b7fe0'],
+    ['head','Usos — ordem da cascata'],
+    ['Despesas do fundo',-A.dTot[m],'var(--grey)'],
+    ['Juros Sênior pagos',-A.sPg[m],'var(--navy)'],
+    ['Juros Mezanino pagos',-A.mPg[m],'var(--navy)'],
+    ['Compra da nova carteira cedida',-A.cNova[m],'#5b7fe0'],
+    ['Compra por revolvência',-A.cRev[m],'var(--sage-d)'],
+    ['Amortização Sênior',-A.sAm[m],'var(--navy)'],
+    ['Amortização Mezanino',-A.mAm[m],'var(--navy)'],
+    ['Distribuição à Subordinada',-A.dSub[m],'var(--orange)'],
+    ['head','Sobra'],
+    ['Caixa final',A.cxF[m],'var(--slate)'],
+  ];
+  const mx=Math.max(...items.filter(i=>i[0]!=='head').map(i=>Math.abs(i[1])),1);
+  document.getElementById('ledger').innerHTML=items.map(i=>{
+    if(i[0]==='head') return `<div class="lb head" style="grid-column:1/-1">${i[1]}</div>`;
+    const [l,v,c]=i, w=Math.abs(v)/mx*100;
+    return `<div class="lb">${l}</div><div><div class="bar" style="width:${w}%;background:${c};opacity:${Math.abs(v)<.005?.12:1}"></div></div><div class="vv ${v<-0.005?'neg':''}">${fN(v)}</div>`;
+  }).join('');
+}
+
+/* ---- Painel 2: Carteira & safras ---- */
+function renderCarteira(res){
+  const {A,R}=res, el=document.getElementById('p2'), M=R.przf;
+  el.innerHTML=`<div class="card"><h3>Fluxo agregado da carteira e marcação a VP <span class="sub">unwind à taxa de cessão anual, base 252</span></h3>
+  ${monthTable(res,[
+    {sec:'Aquisições (safras)'},
+    {l:'Compra de carteira (VP)',v:m=>A.compra[m]},
+    {l:'Prazo dinâmico da safra (meses)',v:m=>A.prz[m],f:v=>v||'–'},
+    {l:'PMT mensal da safra',v:m=>A.pmt[m],f:fN1},
+    {l:'Face adquirida',v:m=>A.face[m]},
+    {l:'Ágio implícito da safra',v:m=>A.compra[m]>0?A.face[m]/A.compra[m]-1:null,f:fP1},
+    {sec:'Fluxo de caixa'},
+    {l:'PMT da Carteira (Juros + Amortização)',v:m=>A.receb[m]},
+    {l:'(−) Perda por inadimplência',v:m=>-A.perda[m],cls:()=>'neg'},
+    {l:'(+) Recuperações (lag)',v:m=>A.recup[m]},
+    {l:'(=) Entradas de caixa',v:m=>A.entr[m],tot:1},
+    {sec:'Valor presente (custo amortizado)'},
+    {l:'Saldo a VP (BoP)',v:m=>A.vpB[m]},
+    {l:'(+) Unwind (taxa de cessão fixa a.m.)',v:m=>A.unw[m]},
+    {l:'(−) PMT da Carteira (Juros + Amortização)',v:m=>-A.receb[m],cls:()=>'neg'},
+    {l:'(+) Compras do mês',v:m=>A.compra[m]},
+    {l:'Saldo a VP (EoP)',v:m=>A.vpE[m],tot:1},
+  ],M)}
+  <p class="mini">Cada safra amortiza como anuidade a ${fP(res.p.txm)} a.m. pelo prazo dinâmico = mín(prazo da carteira; vencimento − mês). A soma dos PMTs das safras vivas é o PMT da carteira do mês — mesma reconciliação da aba de rastreamento individual do Excel.</p></div>`;
+}
+
+/* ---- Painel 3: DRE ---- */
+function renderDRE(res){
+  const {A,R,p}=res, el=document.getElementById('p3'), M=R.przf;
+  const anos=Math.ceil(M/12);
+  const sum=(arr,a,b)=>{let s=0;for(let m=a;m<=Math.min(b,M);m++)s+=arr[m];return s;};
+  const lines=[
+    ['Apropriação de rendimento (unwind)',m=>A.unw[m],1],
+    ['(−) Perdas de crédito',m=>-A.perda[m],1],
+    ['(+) Recuperações',m=>A.recup[m],1],
+    ['(+) Rendimento de aplicações',m=>A.rend[m],1],
+    ['(=) Receita líquida do fundo',null,0],
+    ['(−) Administração',m=>-A.dAdm[m],1],
+    ['(−) Gestão',m=>-A.dGes[m],1],
+    ['(−) Custódia',m=>-A.dCus[m],1],
+    ['(−) Fixas',m=>-A.dFix[m],1],
+    ['(=) Resultado antes das cotas',null,0],
+    ['(−) Remuneração Sênior (competência)',m=>-A.sJ[m],1],
+    ['(−) Remuneração Mezanino (competência)',m=>-A.mJ[m],1],
+    ['(=) Resultado atribuível à Subordinada',null,0],
+  ];
+  const mv=m=>{
+    const u=A.unw[m]-A.perda[m]+A.recup[m]+A.rend[m];
+    const r=u-A.dTot[m];
+    return {rl:u, rf:r, rs:r-A.sJ[m]-A.mJ[m]};
+  };
+  let h=`<div class="card"><h3>DRE — consolidação anual e abertura mensal <span class="sub">regime de competência · R$ mil</span></h3>
+  <div class="tblwrap"><table><thead><tr><th>Linha</th><th>Total</th>`;
+  for(let a=1;a<=anos;a++)h+=`<th>Ano ${a}</th>`;
+  h+='<th style="border-left:2px solid var(--line)"></th>';
+  for(let m=1;m<=M;m++)h+=`<th>${fD(A.date[m])}</th>`;
+  h+='</tr></thead><tbody>';
+  lines.forEach(([lab,fn])=>{
+    const isTot=!fn;
+    const val=m=>{ if(fn)return fn(m); if(lab.includes('Receita'))return mv(m).rl; if(lab.includes('antes'))return mv(m).rf; return mv(m).rs; };
+    h+=`<tr class="${isTot?'tot':''}"><td>${lab}</td>`;
+    let tot=0;for(let m=1;m<=M;m++)tot+=val(m);
+    h+=`<td><b>${fN(tot)}</b></td>`;
+    for(let a=1;a<=anos;a++){let s=0;for(let m=12*(a-1)+1;m<=Math.min(12*a,M);m++)s+=val(m);h+=`<td>${fN(s)}</td>`;}
+    h+='<td style="border-left:2px solid var(--line)"></td>';
+    for(let m=1;m<=M;m++)h+=`<td class="${val(m)<-0.005?'neg':''}">${fN(val(m))}</td>`;
+    h+='</tr>';
+  });
+  let totRS=0;for(let m=1;m<=M;m++)totRS+=mv(m).rs;
+  h+=`</tbody></table></div><p class="mini">Memo — resultado da Subordinada ÷ capital total aportado na classe: <b class="mono">${fP1(totRS/R.apTotB)}</b> no período.</p></div>`;
+  el.innerHTML=h;
+}
+
+/* ---- Painel 4: Rentabilidade ---- */
+function renderRent(res){
+  const {A,R,p}=res, el=document.getElementById('p4'), M=R.przf;
+  const blk=(nome,tir,bench,spr,pc,mo,sprContr,extra)=>`
+    <div class="card ret"><h3>${nome}</h3><table class="stat-tbl compact">
+    <tr><td>TIR (XIRR, a.a.)</td><td class="mono" style="text-align:right;font-weight:600">${fP(tir)}</td></tr>
+    <tr><td>${bench!=null?'Benchmark contratual':'CDI de referência'}</td><td class="mono" style="text-align:right">${bench!=null?'CDI + '+fP1(sprContr):fP(p.cdi)}</td></tr>
+    <tr><td>Retorno como CDI + spread</td><td class="mono" style="text-align:right">${spr==null?'n/d':'CDI '+(spr>=0?'+ ':'− ')+fP(Math.abs(spr))}</td></tr>
+    <tr><td>Retorno como % do CDI</td><td class="mono" style="text-align:right">${fP1(pc)}</td></tr>
+    <tr><td>MOIC (÷ capital aportado)</td><td class="mono" style="text-align:right">${fX(mo)}</td></tr>
+    ${extra||''}</table></div>`;
+  el.innerHTML=`<div class="grid3ret">
+    ${blk('Cota Sênior',R.tirS,R.benchS,R.sprSr,R.pcS,R.moicS,p.sprS,`<tr><td>WAL — prazo médio dos recebimentos</td><td class="mono" style="text-align:right">${R.walS==null?'—':fN1(R.walS)+' m'}</td></tr><tr><td>Quitação integral no mês</td><td class="mono" style="text-align:right">${R.duraS??'—'}</td></tr>`)}
+    ${blk('Cota Mezanino',R.tirM,R.benchM,R.sprMr,R.pcM,R.moicM,p.sprM,`<tr><td>WAL — prazo médio dos recebimentos</td><td class="mono" style="text-align:right">${R.walM==null?'—':fN1(R.walM)+' m'}</td></tr><tr><td>&nbsp;</td><td></td></tr>`)}
+    ${blk('Cota Subordinada — residual',R.tirB,null,R.sprBr,R.pcB,R.moicB,null,`<tr><td>WAL — prazo médio dos recebimentos</td><td class="mono" style="text-align:right">${R.walB==null?'—':fN1(R.walB)+' m'}</td></tr><tr><td>&nbsp;</td><td></td></tr>`)}
+  </div>
+  <div class="card"><h3>Rentabilidade acumulada por cota vs. CDI <span class="sub">PU de competência, base 252 · Subordinada = resultado atribuível ÷ capital vivo</span></h3>
+  ${accChart(res)}
+  <div class="chart-legend"><span><span class="dot" style="background:var(--grey)"></span>CDI acumulado</span><span><span class="dot" style="background:var(--navy)"></span>Sênior</span><span><span class="dot" style="background:var(--orange)"></span>Mezanino</span><span><span class="dot" style="background:var(--sage-d)"></span>Subordinada</span></div>
+  <div class="tblwrap" style="margin-top:12px">${monthTable(res,[
+    {l:'CDI acumulado',v:m=>R.cdiAc[m],f:fP1},
+    {l:'Sênior — rent. acumulada',v:m=>R.senAc[m],f:fP1},
+    {l:'Mezanino — rent. acumulada',v:m=>R.mezAc[m],f:fP1},
+    {l:'Subordinada — rent. acumulada',v:m=>R.subAc[m],f:fP1},
+  ],M)}</div></div>
+  <div class="card"><h3>Fluxos de caixa do cotista <span class="sub">aportes negativos · distribuições positivas</span></h3>
+  ${monthTable(res,[
+    {l:'Fluxo Sênior',v:m=>R.flS[m],cls:(m,v)=>v<-0.005?'neg':''},
+    {l:'Fluxo Mezanino',v:m=>R.flM[m],cls:(m,v)=>v<-0.005?'neg':''},
+    {l:'Fluxo Subordinada',v:m=>R.flB[m],cls:(m,v)=>v<-0.005?'neg':''},
+  ],M)}</div>`;
+}
+
+/* ---- Painel 5: Sensibilidade (engine real) ---- */
+function renderSens(res){
+  const el=document.getElementById('p5');
+  const inads=[0,.01,.02,.03,.04,.05,.07,.10], recs=[0,.25,.50,.75];
+  let h=`<div class="card"><h3>TIR da Subordinada — inadimplência × recovery <span class="sub">recalcula o modelo completo em cada célula (${inads.length*recs.length} simulações)</span></h3>
+  <div class="tblwrap"><table class="hm"><thead><tr><th>Inad ↓ · Rec →</th>${recs.map(r=>`<th>${fP1(r)}</th>`).join('')}</tr></thead><tbody>`;
+  const cells=[];
+  inads.forEach(i=>{
+    h+=`<tr><td class="mono" style="color:var(--in);font-weight:600">${fP1(i)}</td>`;
+    recs.forEach(r=>{
+      const q=run({...P,inad:i,rec:r});
+      cells.push(q.R.tirB);
+      h+=`<td data-v="${q.R.tirB==null?'':q.R.tirB}">${fP1(q.R.tirB)}${q.R.subMin<P.submin?' ⚠':''}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+=`</tbody></table></div><p class="mini">⚠ indica rompimento do covenant de subordinação em algum mês. Cenário ativo: inad ${fP1(P.inad)} · rec ${fP1(P.rec)}.</p></div>`;
+  // tabela ágio implícito
+  const przs=[12,24,36,40,48,60], txs=[.014,.015,.016,.017,.018,.019,.020,.021,.022];
+  h+=`<div class="card"><h3>Ágio implícito sobre o VP — taxa × prazo <span class="sub">grade de pricing: face = PMT(taxa; prazo; −VP) × prazo</span></h3>
+  <div class="tblwrap"><table class="hm"><thead><tr><th>Taxa a.m. ↓ · Prazo →</th>${przs.map(p=>`<th>${p}m</th>`).join('')}</tr></thead><tbody>`;
+  txs.forEach(t=>{
+    h+=`<tr><td class="mono" style="color:var(--in);font-weight:600">${fP(t)}</td>`;
+    przs.forEach(n=>{const ag=PMT(t,n,1)*n-1;h+=`<td>${fP1(ag)}</td>`;});
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+  // heatmap coloring
+  const vals=cells.filter(v=>v!=null), mn=Math.min(...vals), mx=Math.max(...vals);
+  el.querySelectorAll('td[data-v]').forEach(td=>{
+    const v=td.dataset.v===''?null:+td.dataset.v;
+    if(v==null){td.style.background='var(--orange)';td.style.color='#fff';return;}
+    const t=(v-mn)/(mx-mn||1);
+    const mix=(a,b,t)=>Math.round(a+(b-a)*t);
+    td.style.background=`rgb(${mix(217,158,t)},${mix(125,201,t)},${mix(56,130,t)})`;
+    td.style.color=t>0.35?'var(--ink)':'#fff'; td.style.fontWeight='600';
+  });
+}
+
+/* ---- chart de rentabilidade acumulada ---- */
+function accChart(res){
+  const {R}=res, M=R.przf, W=1100,H=300,pl=54,pr=12,pt=14,pb=26;
+  const series=[[R.cdiAc,'var(--grey)',2],[R.senAc,'var(--navy)',2.2],[R.mezAc,'var(--orange)',2.2],[R.subAc,'var(--sage-d)',2.4]];
+  const all=series.flatMap(([s])=>s.slice(0,M+1)).filter(v=>isFinite(v));
+  const mx=Math.max(...all)*1.06||1, mn=Math.min(0,...all);
+  const X=m=>pl+(W-pl-pr)*m/M, Y=v=>pt+(H-pt-pb)*(1-(v-mn)/(mx-mn));
+  let g='';
+  const step=mx>2?0.5:(mx>1?0.25:0.1);
+  for(let v=Math.ceil(mn/step)*step; v<=mx; v+=step){
+    g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e8e2d2"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${(v*100).toFixed(0)}%</text>`;
+  }
+  series.forEach(([s,c,w])=>{
+    let d='';for(let m=0;m<=M;m++)d+=(m?'L':'M')+X(m).toFixed(1)+','+Y(s[m]).toFixed(1);
+    g+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  });
+  for(let m=0;m<=M;m+=6)g+=`<text x="${X(m)}" y="${H-8}" text-anchor="middle">${m}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}</svg>`;
+}
+
+/* ---- charts SVG ---- */
+function lineChart(res){
+  const {A,R}=res, M=R.przf, W=1100,H=260,pl=54,pr=10,pt=12,pb=26;
+  const series=[[A.sE,'var(--navy)'],[A.mE,'var(--orange)'],[A.vpE,'var(--slate)'],[A.cxF,'var(--sage-d)']];
+  const mx=Math.max(...series.flatMap(([s])=>s.slice(0,M+1)))*1.06||1;
+  const X=m=>pl+(W-pl-pr)*m/M, Y=v=>pt+(H-pt-pb)*(1-v/mx);
+  let g='';
+  for(let i=0;i<=4;i++){const v=mx*i/4;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e8e2d2"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${fN(v)}</text>`;}
+  series.forEach(([s,c])=>{
+    let d='';for(let m=0;m<=M;m++)d+=(m?'L':'M')+X(m).toFixed(1)+','+Y(s[m]).toFixed(1);
+    g+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>`;
+  });
+  for(let m=0;m<=M;m+=6)g+=`<text x="${X(m)}" y="${H-8}" text-anchor="middle">${m}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}</svg>`;
+}
+function barChart(res){
+  const {A,R}=res, M=R.przf, W=1100,H=200,pl=54,pr=10,pt=10,pb=26;
+  const tot=m=>A.cNova[m]+A.cRev[m]+(m===0?A.compra[0]:0);
+  const mx=Math.max(...Array.from({length:M+1},(_,m)=>tot(m)))*1.08||1;
+  const bw=(W-pl-pr)/(M+1)-1.5;
+  const X=m=>pl+(W-pl-pr)*m/(M+1), Y=v=>pt+(H-pt-pb)*(1-v/mx);
+  let g='';
+  for(let i=0;i<=3;i++){const v=mx*i/3;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e8e2d2"/><text x="${pl-6}" y="${Y(v)+3}" text-anchor="end">${fN(v)}</text>`;}
+  for(let m=0;m<=M;m++){
+    const ces=(m===0?A.compra[0]:A.cNova[m]), rev=A.cRev[m];
+    const y1=Y(ces), y2=Y(ces+rev);
+    g+=`<rect x="${X(m)}" y="${y1}" width="${bw}" height="${H-pb-y1}" fill="var(--navy)"/>`;
+    if(rev>0)g+=`<rect x="${X(m)}" y="${y2}" width="${bw}" height="${y1-y2}" fill="var(--sage)"/>`;
+  }
+  for(let m=0;m<=M;m+=6)g+=`<text x="${X(m)+bw/2}" y="${H-8}" text-anchor="middle">${m}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}</svg>`;
+}
+
+/* ============================== RENDER ============================== */
+let LAST=null;
+function renderPanels(res){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',+b.dataset.t===activeTab));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('on',i===activeTab));
+  [renderSumario,renderCascata,renderCarteira,renderDRE,renderRent,renderSens][activeTab](res);
+}
+function refresh(){
+  LAST=run(P);
+  syncScen(); syncRail(LAST); renderKPIs(LAST); renderPanels(LAST);
+}
+buildScen(); buildRail(); buildTabs(); refresh();
+
+/* ===================== GERADOR XLSX (client-side) ===================== */
+const NAVY='FF334561', SLATE='FF9EB0C2', SAGE='FF9EC982', CREAM='FFEDE3CC',
+      BLU='FF1F4ED8', GRN='FF1D6B3A', GREY='FF57595C', WHITE='FFFFFFFF', INK='FF241F21';
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const colL=n=>{let s='';while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=(n-1-r)/26;}return s;};
+const dSer=d=>Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(1899,11,30))/864e5);
+
+/* ---------- estilos ---------- */
+function stylesXml(){
+  const numFmts=[
+    [164,'#,##0;(#,##0);&quot;–&quot;'],[165,'0.00%;(0.00%);&quot;–&quot;'],[166,'mmm/yy'],
+    [167,'dd/mm/yyyy'],[168,'0.00&quot;x&quot;'],[169,'#,##0'],[170,'0.0%;(0.0%);&quot;–&quot;'],
+    [171,'#,##0.0;(#,##0.0);&quot;–&quot;']
+  ];
+  const fonts=[ /*0*/`<font><sz val="10"/><name val="Calibri"/><color rgb="${INK}"/></font>`,
+    /*1 in*/`<font><sz val="10"/><name val="Calibri"/><color rgb="${BLU}"/></font>`,
+    /*2 lk*/`<font><sz val="10"/><name val="Calibri"/><color rgb="${GRN}"/></font>`,
+    /*3 b*/`<font><b/><sz val="10"/><name val="Calibri"/><color rgb="${INK}"/></font>`,
+    /*4 hd*/`<font><b/><sz val="12"/><name val="Calibri"/><color rgb="${WHITE}"/></font>`,
+    /*5 it*/`<font><i/><sz val="9"/><name val="Calibri"/><color rgb="${GREY}"/></font>`,
+    /*6 bin*/`<font><b/><sz val="10"/><name val="Calibri"/><color rgb="${BLU}"/></font>`,
+    /*7 blk*/`<font><b/><sz val="10"/><name val="Calibri"/><color rgb="${GRN}"/></font>`];
+  const fills=['<fill><patternFill patternType="none"/></fill>','<fill><patternFill patternType="gray125"/></fill>',
+    `<fill><patternFill patternType="solid"><fgColor rgb="${NAVY}"/></patternFill></fill>`,
+    `<fill><patternFill patternType="solid"><fgColor rgb="${SLATE}"/></patternFill></fill>`,
+    `<fill><patternFill patternType="solid"><fgColor rgb="${SAGE}"/></patternFill></fill>`,
+    `<fill><patternFill patternType="solid"><fgColor rgb="${CREAM}"/></patternFill></fill>`];
+  // xf: [numFmt,font,fill,align]
+  const xfs=[
+    [0,0,0,''],            //0 default
+    [164,1,0,'r'],         //1 input num
+    [165,1,0,'r'],         //2 input pct
+    [169,1,0,'r'],         //3 input int
+    [167,1,0,'r'],         //4 input date
+    [164,0,0,'r'],         //5 fx num
+    [165,0,0,'r'],         //6 fx pct
+    [169,0,0,'r'],         //7 fx int
+    [166,0,0,'r'],         //8 fx date
+    [164,2,0,'r'],         //9 lk num
+    [165,2,0,'r'],         //10 lk pct
+    [166,2,0,'r'],         //11 lk date
+    [0,0,0,''],            //12 label
+    [0,3,0,''],            //13 label bold
+    [0,5,0,''],            //14 note
+    [0,3,3,''],            //15 section (slate)
+    [0,4,2,''],            //16 header (navy)
+    [164,3,4,'r'],         //17 total (sage)
+    [169,3,5,'c'],         //18 month hd (cream)
+    [0,3,0,'c'],           //19 check
+    [168,0,0,'r'],         //20 fx mult
+    [164,3,0,'r'],         //21 fx num bold
+    [165,3,0,'r'],         //22 fx pct bold
+    [164,6,0,'r'],         //23 input num bold
+    [169,2,0,'r'],         //24 lk int
+    [168,2,0,'r'],         //25 lk mult
+    [0,2,0,''],            //26 lk text
+    [171,0,0,'r'],         //27 fx num 1dec
+    [169,7,5,'c'],         //28 month hd lk
+  ];
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="${numFmts.length}">${numFmts.map(([id,c])=>`<numFmt numFmtId="${id}" formatCode="${c}"/>`).join('')}</numFmts>
+<fonts count="${fonts.length}">${fonts.join('')}</fonts>
+<fills count="${fills.length}">${fills.join('')}</fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="${xfs.length}">${xfs.map(([n,f,fl,a])=>`<xf numFmtId="${n}" fontId="${f}" fillId="${fl}" borderId="0" applyNumberFormat="1" applyFont="1" applyFill="1"${a?` applyAlignment="1"><alignment horizontal="${a==='r'?'right':'center'}"/></xf>`:'/>'}`).join('')}</cellXfs>
+</styleSheet>`;
+}
+
+/* ---------- sheet builder ---------- */
+function Sheet(name){
+  return {name, cells:{}, cols:[], freeze:null,
+    set(r,c,v,s,f){ (this.cells[r]=this.cells[r]||{})[c]={v,s:s||0,f}; },
+    fx(r,c,f,s){ this.set(r,c,null,s,f); },
+    num(r,c,v,s){ this.set(r,c,+v,s); },
+    str(r,c,v,s){ this.set(r,c,String(v),(s==null?12:s)); this.cells[r][c].t='s'; },
+    date(r,c,d,s){ this.set(r,c,dSer(d),s); },
+  };
+}
+function sheetXml(sh){
+  let colsXml='';
+  if(sh.cols.length) colsXml='<cols>'+sh.cols.map(([a,b,w])=>`<col min="${a}" max="${b}" width="${w}" customWidth="1"/>`).join('')+'</cols>';
+  let view='<sheetViews><sheetView showGridLines="0" workbookViewId="0">';
+  if(sh.freeze){const [r,c]=sh.freeze; view+=`<pane xSplit="${c}" ySplit="${r}" topLeftCell="${colL(c+1)}${r+1}" activePane="bottomRight" state="frozen"/>`;}
+  view+='</sheetView></sheetViews>';
+  const rows=Object.keys(sh.cells).map(Number).sort((a,b)=>a-b).map(r=>{
+    const cs=sh.cells[r];
+    const cells=Object.keys(cs).map(Number).sort((a,b)=>a-b).map(c=>{
+      const cell=cs[c], ref=colL(c)+r, s=cell.s?` s="${cell.s}"`:'';
+      if(cell.f!=null) return `<c r="${ref}"${s}><f>${esc(cell.f)}</f></c>`;
+      if(cell.t==='s') return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(cell.v)}</t></is></c>`;
+      if(cell.v==null) return `<c r="${ref}"${s}/>`;
+      return `<c r="${ref}"${s}><v>${cell.v}</v></c>`;
+    }).join('');
+    return `<row r="${r}">${cells}</row>`;
+  }).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${view}${colsXml}<sheetData>${rows}</sheetData></worksheet>`;
+}
+
+/* ---------- construção do modelo ---------- */
+function buildWorkbook(P, HOLIDAYS_ARR, cessArr, X){
+  const BE=(X&&X.be)||null;
+  const CEN=(X&&X.cen)||null;
+  const M=84, C0=3; // mês m na coluna C0+m (C=3)
+  const col=m=>colL(C0+m);
+  const dcolK=m=>colL(11+m-1); // DRE: mês m na coluna K+..
+  const LASTC=col(M); // CI
+  const NHOL=HOLIDAYS_ARR.length;
+  const FER=`Feriados!$A$2:$A$${NHOL+1}`;
+  const sheets=[];
+
+  /* ---- Capa ---- */
+  const capa=Sheet('Capa'); sheets.push(capa);
+  capa.cols=[[1,1,3],[2,2,110]];
+  capa.str(3,2,'MODELO FINANCEIRO — FIDC',16);
+  capa.str(5,2,'Aquisição de carteira de recebíveis a valor presente, com revolvência e cessões adicionais',13);
+  capa.str(6,2,'Cotas Sênior · Mezanino · Subordinada — base 252 com calendário ANBIMA',12);
+  capa.str(8,2,'Arquivo gerado pelo simulador HTML com as premissas ativas no momento da exportação.',14);
+  capa.str(9,2,'Convenção de cores: azul = input · preto = fórmula · verde = link entre abas',14);
+
+  /* ---- Índice ---- */
+  const idx=Sheet('Índice'); sheets.push(idx);
+  idx.cols=[[1,1,3],[2,2,30],[3,3,90]];
+  idx.str(2,2,'ÍNDICE',16);
+  [['Premissas','Painel de premissas e switch de cenários'],
+   ['Feriados','Calendário ANBIMA usado no NETWORKDAYS (base 252)'],
+   ['Carteira','Safras, revolvência, fluxo agregado, VP e rastreamento individual'],
+   ['Modelo','Waterfall mensal: aportes → despesas → juros → cessão/revolvência → amortização → subordinada'],
+   ['DRE','Resultado mensal com consolidação anual'],
+   ['Rentabilidade','TIR (XIRR), CDI + spread, % do CDI e MOIC por classe'],
+   ['Sensibilidade','Ágio implícito e consumo do PL subordinado'],
+   ['Cenários','Base / Otimista / Pessimista'],
+   ['Sumário','Sumário executivo e checks de integridade']].forEach(([t,d],i)=>{
+    idx.fx(5+i,2,`HYPERLINK("#'${t}'!A1","${t}")`,13);
+    idx.str(5+i,3,d,12);
+  });
+
+  /* ---- Premissas ---- */
+  const pr=Sheet('Premissas'); sheets.push(pr);
+  pr.cols=[[1,1,3],[2,2,52],[3,3,14],[4,6,12],[7,7,62]];
+  pr.freeze=[4,0];
+  pr.str(2,2,'PREMISSAS — PAINEL DE CONTROLE',16);
+  pr.str(3,2,'Valores em R$ mil, salvo indicação | Inputs em azul',14);
+  const sec=(r,t)=>{pr.str(r,2,t,15);for(let c=3;c<=6;c++)pr.str(r,c,'',15);};
+  sec(5,'CENÁRIO');
+  pr.str(6,2,'Cenário ativo (1=Base · 2=Otimista · 3=Pessimista)',12);
+  pr.num(6,3,P.cen>0?P.cen:1,3);
+  pr.fx(6,4,'CHOOSE($C$6,"Base","Otimista","Pessimista")',13);
+  pr.str(8,4,'Base',15); pr.str(8,5,'Otimista',15); pr.str(8,6,'Pessimista',15);
+  sec(9,'CARTEIRA DE RECEBÍVEIS — AQUISIÇÃO A VALOR PRESENTE');
+  pr.str(10,2,'VP de aquisição inicial (desembolso do fundo)',13); pr.num(10,3,P.vp0,23);
+  pr.str(11,2,'Prazo da carteira (meses)',12); pr.num(11,3,P.przCart,3);
+  pr.str(12,2,'Taxa de cessão (% a.m.) — FIXA',13); pr.num(12,3,P.txm,2);
+  pr.str(13,2,'Taxa de cessão (% a.a.)',12); pr.fx(13,3,'(1+C12)^12-1',6);
+  pr.str(14,2,'PMT mensal da carteira inicial',12); pr.fx(14,3,'PMT(C12,C11,-C10)',5);
+  pr.str(15,2,'Valor de face total da carteira inicial (PMT × prazo)',13); pr.fx(15,3,'C14*C11',21);
+  pr.str(16,2,'Ágio implícito sobre o VP (%) — OUTPUT',13); pr.fx(16,3,'C15/C10-1',22);
+  pr.str(17,2,'Ágio (R$ = face − VP)',12); pr.fx(17,3,'C15-C10',5);
+  sec(18,'REVOLVÊNCIA');
+  pr.str(19,2,'Revolvência ativa (1 = Sim · 0 = Não)',12); pr.num(19,3,P.revon,3);
+  pr.str(20,2,'Período de revolvência (meses)',12); pr.num(20,3,P.rev,3);
+  sec(22,'CRÉDITO');
+  const cust0=P.cen===0;
+  pr.str(23,2,'Inadimplência (% dos recebimentos mensais)',12);
+  pr.fx(23,3,'CHOOSE($C$6,D23,E23,F23)',6);
+  pr.num(23,4,cust0?P.inad:0.01,2); pr.num(23,5,0.015,2); pr.num(23,6,0.05,2);
+  pr.str(24,2,'Recovery rate (% recuperado sobre a perda)',12);
+  pr.fx(24,3,'CHOOSE($C$6,D24,E24,F24)',6);
+  pr.num(24,4,cust0?P.rec:0.50,2); pr.num(24,5,0.75,2); pr.num(24,6,0.25,2);
+  pr.str(25,2,'Lag de recuperação (meses)',12); pr.num(25,3,P.lag,3);
+  sec(27,'MACRO');
+  pr.str(28,2,'CDI (% a.a.)',12);
+  pr.fx(28,3,'CHOOSE($C$6,D28,E28,F28)',6);
+  pr.num(28,4,cust0?P.cdi:0.125,2); pr.num(28,5,0.115,2); pr.num(28,6,0.14,2);
+  pr.str(29,2,'Aplicação do caixa livre (% do CDI)',12); pr.num(29,3,P.aplic,2);
+  pr.str(30,2,'CDI mensal equivalente',12); pr.fx(30,3,'(1+C28)^(1/12)-1',6);
+  sec(32,'COTAS — ESTRUTURA, BENCHMARK E CARÊNCIAS');
+  pr.str(33,2,'% Cota Sênior',12); pr.num(33,3,P.pSen,2);
+  pr.str(34,2,'Spread Sênior (a.a., sobre CDI)',12); pr.num(34,3,P.sprS,2);
+  pr.str(35,2,'Taxa Sênior mensal (referência, composta)',12); pr.fx(35,3,'((1+C28)*(1+C34))^(1/12)-1',6);
+  pr.str(36,2,'Carência de juros Sênior (meses — juros capitalizam)',12); pr.num(36,3,P.cjS,3);
+  pr.str(37,2,'Carência de amortização Sênior (meses)',12); pr.num(37,3,P.caS,3);
+  pr.str(38,2,'% Cota Mezanino',12); pr.num(38,3,P.pMez,2);
+  pr.str(39,2,'Spread Mezanino (a.a., sobre CDI)',12); pr.num(39,3,P.sprM,2);
+  pr.str(40,2,'Taxa Mezanino mensal (referência)',12); pr.fx(40,3,'((1+C28)*(1+C39))^(1/12)-1',6);
+  pr.str(41,2,'Carência de juros Mezanino (meses)',12); pr.num(41,3,P.cjM,3);
+  pr.str(42,2,'Carência de amortização Mezanino (meses)',12); pr.num(42,3,P.caM,3);
+  pr.str(43,2,'% Cota Subordinada (residual)',12); pr.fx(43,3,'1-C33-C38',6);
+  pr.str(44,2,'Subordinação mínima exigida (Sub+Mez / PL)',12); pr.num(44,3,P.submin,2);
+  sec(46,'EMISSÃO E CAIXA MÍNIMO');
+  pr.str(47,2,'Preço de aquisição inicial (= VP pago)',12); pr.fx(47,3,'C10',5);
+  pr.str(48,2,'Caixa mínimo do fundo (% da emissão)',12); pr.num(48,3,P.cxminP,2);
+  pr.str(49,2,'Emissão total de cotas (PL inicial)',13); pr.fx(49,3,'C47/(1-C48)',21);
+  pr.str(50,2,'Caixa mínimo (R$)',12); pr.fx(50,3,'C49*C48',5);
+  pr.str(51,2,'PL Cota Sênior',12); pr.fx(51,3,'C49*C33',5);
+  pr.str(52,2,'PL Cota Mezanino',12); pr.fx(52,3,'C49*C38',5);
+  pr.str(53,2,'PL Cota Subordinada',12); pr.fx(53,3,'C49*C43',5);
+  sec(55,'CUSTOS DO FUNDO');
+  pr.str(56,2,'Taxa de administração (% a.a. s/ ativos)',12); pr.num(56,3,P.adm,2);
+  pr.str(57,2,'Taxa de gestão (% a.a. s/ ativos)',12); pr.num(57,3,P.ges,2);
+  pr.str(58,2,'Taxa de custódia (% a.a. s/ ativos)',12); pr.num(58,3,P.cust,2);
+  pr.str(59,2,'Despesas fixas anuais (auditoria, rating, CVM/ANBIMA)',12); pr.num(59,3,P.fixas,1);
+  sec(61,'DATAS E PRAZO DO FUNDO');
+  pr.str(62,2,'Data de integralização (mês 0)',12); pr.date(62,3,new Date(P.d0+'T00:00:00Z'),4);
+  pr.str(63,2,'Prazo do fundo (meses)',13); pr.num(63,3,P.przf,3);
+  pr.str(64,2,'Horizonte estrutural do modelo (meses)',12); pr.num(64,3,M,7);
+  pr.str(65,2,'Check — período de revolvência < prazo do fundo',13); pr.fx(65,3,'C20<C63',19);
+  sec(67,'CHOQUE DE INADIMPLÊNCIA (STRESS TEMPORÁRIO)');
+  pr.str(68,2,'Multiplicador do choque (1 = sem choque)',12); pr.num(68,3,P.chqMult??1,1);
+  pr.str(69,2,'Mês inicial do choque',12); pr.num(69,3,P.chqIni??13,3);
+  pr.str(70,2,'Mês final do choque',12); pr.num(70,3,P.chqFim??18,3);
+  pr.str(71,2,'Inadimplência efetiva durante o choque (limitada a 100%)',13); pr.fx(71,3,'MIN(1,C23*C68)',6);
+  pr.str(72,2,'Ex.: multiplicador 3 entre os meses 13–18 simula crise de crédito localizada.',14);
+
+  /* ---- Feriados ---- */
+  const fe=Sheet('Feriados'); sheets.push(fe);
+  fe.cols=[[1,1,14]];
+  fe.str(1,1,'Data (feriados ANBIMA)',13);
+  HOLIDAYS_ARR.forEach((h,i)=>fe.date(2+i,1,new Date(h+'T00:00:00Z'),8));
+
+  /* ---- Carteira ---- */
+  const ca=Sheet('Carteira'); sheets.push(ca);
+  ca.cols=[[1,1,3],[2,2,50]]; for(let m=0;m<=M;m++)ca.cols.push([C0+m,C0+m,11]);
+  ca.cols.push([C0+M+2,C0+M+6,15]);
+  ca.freeze=[8,3];
+  ca.str(2,2,'CARTEIRA DE RECEBÍVEIS — SAFRAS, REVOLVÊNCIA E VALOR PRESENTE',16);
+  ca.str(3,2,'Em R$ mil | Taxa de cessão FIXA por safra | Prazo dinâmico truncado no vencimento do fundo | Base 252 c/ feriados ANBIMA',14);
+  const casec=(r,t)=>{ca.str(r,2,t,15);for(let m=0;m<=M;m++)ca.str(r,C0+m,'',15);};
+  casec(5,'AQUISIÇÕES (SAFRAS)');
+  ca.str(6,2,'Mês',13); ca.str(7,2,'Data',13); ca.str(8,2,'Dias úteis do mês',12);
+  ca.num(6,C0,0,18);
+  ca.fx(7,C0,'Premissas!$C$62',11);
+  for(let m=1;m<=M;m++){
+    ca.fx(6,C0+m,`${col(m-1)}6+1`,18);
+    ca.fx(7,C0+m,`EDATE(${col(m-1)}7,1)`,8);
+  }
+  for(let m=0;m<=M;m++) ca.fx(8,C0+m,`NETWORKDAYS(EOMONTH(${col(m)}7,-1)+1,EOMONTH(${col(m)}7,0),${FER})`,7);
+  const carows=[[10,'Compra de carteira (VP desembolsado)',13],[11,'Prazo dinâmico da safra (meses)',12],
+    [12,'PMT mensal gerado pela safra',13],[13,'Face adquirida (PMT × prazo dinâmico)',12],
+    [14,'Ágio implícito da safra (%)',12]];
+  carows.forEach(([r,t,s])=>ca.str(r,2,t,s));
+  ca.fx(10,C0,'Premissas!$C$47',9);
+  for(let m=1;m<=M;m++) ca.fx(10,C0+m,`Modelo!${col(m)}54`,9);
+  for(let m=0;m<=M;m++){
+    const c=col(m);
+    ca.fx(11,C0+m,`MAX(0,MIN(Premissas!$C$11,Premissas!$C$63-${c}6))`,7);
+    ca.fx(12,C0+m,`IF(AND(${c}10>0,${c}11>0),PMT(Premissas!$C$12,${c}11,-${c}10),0)`,27);
+    ca.fx(13,C0+m,`${c}12*${c}11`,5);
+    ca.fx(14,C0+m,`IF(${c}10>0,${c}13/${c}10-1,"")`,6);
+  }
+  casec(16,'FLUXO DE CAIXA AGREGADO DA CARTEIRA');
+  [[17,'Saldo de face (BoP)',13],[18,'(+) Face adquirida no mês',12],[19,'(−) Recebimento contratual (PMT das safras vivas)',12],
+   [20,'Saldo de face (EoP)',13],[21,'Perda por inadimplência',12],[22,'(=) Recebimento efetivo',12],
+   [23,'(+) Recuperações (lag)',12],[24,'(=) Total de entradas de caixa',13]].forEach(([r,t,s])=>ca.str(r,2,t,s));
+  ca.num(17,C0,0,5); ca.fx(18,C0,'C13',5); ca.num(19,C0,0,5);
+  ca.fx(20,C0,'C17+C18-C19',5);
+  ca.num(21,C0,0,5); ca.num(22,C0,0,5); ca.num(23,C0,0,5); ca.fx(24,C0,'C22+C23',17);
+  const G=(m,f)=>`IF(${col(m)}$6>Premissas!$C$63,0,${f})`;
+  for(let m=1;m<=M;m++){
+    const c=col(m),p=col(m-1);
+    ca.fx(17,C0+m,G(m,`${p}20`),5);
+    ca.fx(18,C0+m,G(m,`${c}13`),5);
+    ca.fx(19,C0+m,G(m,`SUMPRODUCT((${c}6-$C$6:${p}6<=$C$11:${p}11)*$C$12:${p}12)`),5);
+    ca.fx(20,C0+m,G(m,`${c}17+${c}18-${c}19`),5);
+    ca.fx(21,C0+m,G(m,`${c}19*MIN(1,Premissas!$C$23*IF(AND(${c}6>=Premissas!$C$69,${c}6<=Premissas!$C$70),Premissas!$C$68,1))`),5);
+    ca.fx(22,C0+m,G(m,`${c}19-${c}21`),5);
+    ca.fx(23,C0+m,G(m,`IF(${c}6>Premissas!$C$25,OFFSET(${c}21,0,-Premissas!$C$25)*Premissas!$C$24,0)`),5);
+    ca.fx(24,C0+m,G(m,`${c}22+${c}23`),17);
+  }
+  casec(26,'CARTEIRA A VALOR PRESENTE (custo amortizado à taxa de cessão fixa a.m.)');
+  [[27,'Saldo a VP (BoP)',13],[28,'(+) Apropriação de rendimento (unwind, taxa fixa a.m.)',12],
+   [29,'(−) Recebimento contratual',12],[30,'Saldo a VP antes de novas compras',12],
+   [31,'(+) Compras do mês (VP)',12],[32,'Saldo a VP (EoP)',13]].forEach(([r,t,s])=>ca.str(r,2,t,s));
+  ca.num(27,C0,0,5);ca.num(28,C0,0,5);ca.num(29,C0,0,5);
+  ca.fx(30,C0,'C27+C28-C29',5); ca.fx(31,C0,'C10',5); ca.fx(32,C0,'C30+C31',17);
+  for(let m=1;m<=M;m++){
+    const c=col(m),p=col(m-1);
+    ca.fx(27,C0+m,G(m,`${p}32`),5);
+    ca.fx(28,C0+m,G(m,`${c}27*Premissas!$C$12`),5);
+    ca.fx(29,C0+m,G(m,`${c}19`),5);
+    ca.fx(30,C0+m,G(m,`${c}27+${c}28-${c}29`),5);
+    ca.fx(31,C0+m,G(m,`${c}10`),5);
+    ca.fx(32,C0+m,G(m,`${c}30+${c}31`),17);
+  }
+  ca.str(34,2,'Volume total originado no fundo (inicial + revolvência)',13); ca.fx(34,3,`SUM(C10:${LASTC}10)`,21);
+  ca.str(35,2,'Face total originada',12); ca.fx(35,3,`SUM(C13:${LASTC}13)`,5);
+  ca.str(36,2,'Ágio médio ponderado implícito',12); ca.fx(36,3,'C35/C34-1',6);
+  ca.str(37,2,'Múltiplo de reciclagem (originação ÷ capital aportado)',12); ca.fx(37,3,'C34/Modelo!$C$82',20);
+  ca.str(38,2,'Check — VP zera no vencimento do fundo',13);
+  ca.fx(38,3,`ABS(INDEX(C32:${LASTC}32,1,Premissas!$C$63+1))<0.01`,19);
+  ca.str(39,2,'Check — soma das safras = saldo a VP (todos os meses)',13);
+  ca.fx(39,3,`SUMPRODUCT(ABS(C41:${LASTC}41))<0.01`,19);
+  ca.str(41,2,'Reconciliação: soma das safras − saldo a VP (deve ser 0)',14);
+  for(let m=0;m<=M;m++) ca.fx(41,C0+m,`SUM(${col(m)}45:${col(m)}129)-${col(m)}32`,27);
+  casec(43,'SALDO A VP POR SAFRA — RASTREAMENTO INDIVIDUAL');
+  ca.str(44,2,'Safra (linha por mês de aquisição)',13);
+  const HK=C0+M+2,HL=HK+1,HM=HK+2,HN=HK+3,HO=HK+4;
+  [['Mês aquis.',HK],['VP desembolsado',HL],['Prazo dinâm.',HM],['PMT da safra',HN],['Taxa (a.m.)',HO]]
+    .forEach(([t,c])=>ca.str(44,c,t,15));
+  for(let k=0;k<=M;k++){
+    const r=45+k;
+    ca.fx(r,2,`"Safra mês "&$${colL(HK)}${r}`,14);
+    ca.num(r,HK,k,7);
+    ca.fx(r,HL,`INDEX($C$10:$${LASTC}$10,1,$${colL(HK)}${r}+1)`,9);
+    ca.fx(r,HM,`INDEX($C$11:$${LASTC}$11,1,$${colL(HK)}${r}+1)`,24);
+    ca.fx(r,HN,`INDEX($C$12:$${LASTC}$12,1,$${colL(HK)}${r}+1)`,9);
+    ca.fx(r,HO,'Premissas!$C$12',10);
+    ca.fx(r,C0,`IF($${colL(HK)}${r}=0,$${colL(HL)}${r},0)`,5);
+    for(let m=1;m<=M;m++){
+      const c=col(m),p=col(m-1);
+      ca.fx(r,C0+m,`IF(OR(${c}$6>Premissas!$C$63,${c}$6<$${colL(HK)}${r},${c}$6>$${colL(HK)}${r}+$${colL(HM)}${r}),0,IF(${c}$6=$${colL(HK)}${r},$${colL(HL)}${r},MAX(0,${p}${r}*(1+$${colL(HO)}${r})-$${colL(HN)}${r})))`,5);
+    }
+  }
+
+  /* ---- Modelo (waterfall) ---- */
+  const mo=Sheet('Modelo'); sheets.push(mo);
+  mo.cols=[[1,1,3],[2,2,50]]; for(let m=0;m<=M;m++)mo.cols.push([C0+m,C0+m,11]);
+  mo.freeze=[8,3];
+  mo.str(2,2,'CASCATA DE PAGAMENTOS (WATERFALL MENSAL)',16);
+  mo.str(3,2,'Em R$ mil | Aportes → despesas → juros → cessão adicional → revolvência → amortização → subordinada | Linha 18 = INPUT mensal (azul)',14);
+  const mosec=(r,t)=>{mo.str(r,2,t,15);for(let m=0;m<=M;m++)mo.str(r,C0+m,'',15);};
+  mosec(5,'CAIXA');
+  mo.str(6,2,'Mês',13); mo.str(7,2,'Data',13); mo.str(8,2,'Dias úteis do mês',12);
+  for(let m=0;m<=M;m++){
+    mo.fx(6,C0+m,`Carteira!${col(m)}6`,28);
+    mo.fx(7,C0+m,`Carteira!${col(m)}7`,11);
+    mo.fx(8,C0+m,`Carteira!${col(m)}8`,24);
+  }
+  const L={};
+  const lab=(r,t,s)=>{mo.str(r,2,t,s||12);};
+  lab(10,'Caixa inicial');lab(11,'(+) Entradas da carteira');lab(12,'(+) Liquidação da carteira no vencimento (a VP)');
+  lab(13,'(+) Rendimento do caixa (CDI, du/252)');lab(14,'(+) Aportes de capital do mês');lab(15,'(=) Caixa disponível',13);
+  mosec(17,'APORTES E CESSÕES ADICIONAIS');
+  lab(18,'Nova carteira ofertada para cessão (VP)  ← INPUT',13);
+  lab(19,'Aporte total necessário (VP ÷ (1 − % caixa mínimo))',13);
+  lab(20,'(+) Aporte Cota Sênior');lab(21,'(+) Aporte Cota Mezanino');lab(22,'(+) Aporte Cota Subordinada');
+  lab(23,'Emissão acumulada (PL nominal aportado)',13);
+  mosec(25,'DESPESAS DO FUNDO');
+  lab(26,'(−) Taxa de administração');lab(27,'(−) Taxa de gestão');lab(28,'(−) Taxa de custódia');lab(29,'(−) Despesas fixas');
+  lab(30,'(=) Total de despesas',13);lab(31,'(=) Caixa após despesas',13);
+  mosec(33,'JUROS DAS COTAS (base 252)');
+  lab(34,'Saldo Sênior (BoP)');lab(35,'Juros Sênior (competência)');lab(36,'Juros Sênior capitalizados (carência)');
+  lab(37,'(−) Juros Sênior pagos');lab(38,'Juros Sênior acumulados não pagos (EoP)');lab(39,'(=) Caixa após juros Sênior',13);
+  lab(40,'Saldo Mezanino (BoP)');lab(41,'Juros Mezanino (competência)');lab(42,'Juros Mezanino capitalizados (carência)');
+  lab(43,'(−) Juros Mezanino pagos');lab(44,'Juros Mez. acumulados não pagos (EoP)');lab(45,'(=) Caixa após juros Mezanino',13);
+  mosec(47,'CESSÃO ADICIONAL E REVOLVÊNCIA');
+  lab(48,'Caixa mínimo exigido (dinâmico, s/ emissão acumulada)');
+  lab(49,'(−) Compra da nova carteira cedida (VP)',13);lab(50,'(=) Caixa após cessão adicional');
+  lab(51,'Excedente disponível para reinvestimento');lab(52,'Janela de revolvência aberta? (1/0)',14);
+  lab(53,'(−) Compra por revolvência (VP)',13);lab(54,'Compra TOTAL do mês (VP) → Carteira',13);
+  lab(55,'Face adquirida no mês (memo)',14);lab(56,'(=) Caixa após revolvência',13);
+  mosec(58,'AMORTIZAÇÃO DAS COTAS');
+  lab(59,'(−) Amortização Sênior');lab(60,'Saldo Sênior (EoP, pós-aporte)',13);
+  lab(61,'(−) Amortização Mezanino');lab(62,'Saldo Mezanino (EoP, pós-aporte)',13);
+  lab(63,'(=) Caixa após amortizações',13);
+  mosec(65,'COTA SUBORDINADA');
+  lab(66,'(−) Distribuição à Subordinada');lab(67,'(=) Caixa final',13);
+  mosec(69,'PATRIMÔNIO & SUBORDINAÇÃO');
+  lab(70,'Ativo total (VP carteira + caixa)');lab(71,'PL Subordinada + Mezanino (implícito)');
+  lab(72,'PL Subordinada (implícito)');lab(73,'Razão de subordinação (Sub+Mez / Ativo)',13);
+  lab(74,'Subordinação mínima exigida');
+  lab(76,'Check — cascata fecha (usos = caixa disponível)',13);
+  mosec(78,'MEMO — CAPITAL APORTADO');
+  lab(79,'Total aportado — Cota Sênior');lab(80,'Total aportado — Cota Mezanino');
+  lab(81,'Total aportado — Cota Subordinada');lab(82,'Total aportado (PL nominal)',13);
+  mosec(84,'MÉTRICAS DE RISCO E MARGEM');
+  lab(85,'Índice de cobertura Sênior (Ativo ÷ Sênior devido)');
+  lab(86,'Índice de cobertura Sênior + Mezanino');
+  lab(87,'Yield do ativo (% a.m., líquido de perdas)');
+  lab(88,'Custo do passivo remunerado (% a.m.)');
+  lab(89,'Excess spread mensal (a.m.)',13);
+  // mês 0
+  mo.fx(10,C0,'Premissas!$C$49',9);
+  [11,12,13,14].forEach(r=>mo.num(r,C0,0,5));
+  mo.fx(15,C0,'SUM(C10:C14)',5);
+  mo.num(18,C0,0,1); mo.num(19,C0,0,5);
+  [20,21,22].forEach(r=>mo.num(r,C0,0,5));
+  mo.fx(23,C0,'Premissas!$C$49',9);
+  [26,27,28,29].forEach(r=>mo.num(r,C0,0,5));
+  mo.fx(30,C0,'SUM(C26:C29)',5); mo.fx(31,C0,'C15-C30',5);
+  [34,35,36,37,38].forEach(r=>mo.num(r,C0,0,5)); mo.fx(39,C0,'C31-C37',5);
+  [40,41,42,43,44].forEach(r=>mo.num(r,C0,0,5)); mo.fx(45,C0,'C39-C43',5);
+  mo.fx(48,C0,'Premissas!$C$48*C23',5);
+  mo.fx(49,C0,'Premissas!$C$47',21); mo.fx(50,C0,'C45-C49',5);
+  mo.fx(51,C0,'MAX(0,C50-C48)',5); mo.num(52,C0,1,7);
+  mo.num(53,C0,0,5); mo.fx(54,C0,'C49+C53',21); mo.fx(55,C0,'Carteira!C13',9);
+  mo.fx(56,C0,'C50-C53',5);
+  mo.num(59,C0,0,5); mo.fx(60,C0,'Premissas!$C$51',9);
+  mo.num(61,C0,0,5); mo.fx(62,C0,'Premissas!$C$52',9);
+  mo.fx(63,C0,'C56-C59-C61',5);
+  mo.num(66,C0,0,5); mo.fx(67,C0,'C63-C66',17);
+  mo.fx(70,C0,'Carteira!C32+C67',9); mo.fx(71,C0,'C70-C60-C38',5);
+  mo.fx(72,C0,'C71-C62',5); mo.fx(73,C0,'IF(C70=0,"",C71/C70)',6);
+  mo.fx(74,C0,'Premissas!$C$44',10);
+  mo.fx(76,C0,'ABS(C15-C30-C37-C43-C49-C53-C59-C61-C66-C67)<0.01',19);
+  mo.fx(79,3,`Premissas!$C$51+SUM(D20:${LASTC}20)`,21);
+  mo.str(79,4,'PL inicial + aportes ao longo da vida do fundo',14);
+  mo.fx(80,3,`Premissas!$C$52+SUM(D21:${LASTC}21)`,21);
+  mo.fx(81,3,`Premissas!$C$53+SUM(D22:${LASTC}22)`,21);
+  mo.fx(82,3,'SUM(C79:C81)',17);
+  // métricas de risco — mês 0
+  mo.fx(85,C0,'IF(C60+C38<=0,"",C70/(C60+C38))',20);
+  mo.fx(86,C0,'IF(C60+C38+C62+C44<=0,"",C70/(C60+C38+C62+C44))',20);
+  mo.fx(87,C0,'IF(Carteira!C27<=0,"",(Carteira!C28-Carteira!C21+Carteira!C23)/Carteira!C27)',6);
+  mo.fx(88,C0,'IF(C34+C40<=0,"",(C35+C41)/(C34+C40))',6);
+  mo.fx(89,C0,'IF(OR(C87="",C88=""),"",C87-C88)',6);
+  for(let m=1;m<=M;m++){
+    const c=col(m),p=col(m-1),PZ='Premissas!$C$63';
+    mo.fx(10,C0+m,`${p}67`,5);
+    mo.fx(11,C0+m,`Carteira!${c}24`,9);
+    mo.fx(12,C0+m,`IF(${c}6=${PZ},Carteira!${c}30,0)`,9);
+    mo.fx(13,C0+m,`IF(${c}$6>${PZ},0,${c}10*((1+Premissas!$C$28)^(${c}8/252)-1)*Premissas!$C$29)`,5);
+    mo.fx(14,C0+m,`${c}19`,5);
+    mo.fx(15,C0+m,`SUM(${c}10:${c}14)`,5);
+    mo.num(18,C0+m,cessArr[m]||0,1);
+    mo.fx(19,C0+m,`IF(${c}6>=${PZ},0,${c}18/(1-Premissas!$C$48))`,21);
+    mo.fx(20,C0+m,`${c}19*Premissas!$C$33`,5);
+    mo.fx(21,C0+m,`${c}19*Premissas!$C$38`,5);
+    mo.fx(22,C0+m,`${c}19*Premissas!$C$43`,5);
+    mo.fx(23,C0+m,`${p}23+${c}19`,5);
+    const base=`(Carteira!${c}27+${c}10)/12`;
+    mo.fx(26,C0+m,`MIN(${c}15,Premissas!$C$56*${base})`,5);
+    mo.fx(27,C0+m,`MIN(${c}15-${c}26,Premissas!$C$57*${base})`,5);
+    mo.fx(28,C0+m,`MIN(${c}15-${c}26-${c}27,Premissas!$C$58*${base})`,5);
+    mo.fx(29,C0+m,`MIN(${c}15-SUM(${c}26:${c}28),IF(${c}6>${PZ},0,Premissas!$C$59/12))`,5);
+    mo.fx(30,C0+m,`SUM(${c}26:${c}29)`,5);
+    mo.fx(31,C0+m,`${c}15-${c}30`,5);
+    mo.fx(34,C0+m,`${p}60`,5);
+    mo.fx(35,C0+m,`${c}34*(((1+Premissas!$C$28)*(1+Premissas!$C$34))^(${c}8/252)-1)`,5);
+    mo.fx(36,C0+m,`IF(${c}6<=Premissas!$C$36,${c}35,0)`,5);
+    mo.fx(37,C0+m,`IF(${c}6<=Premissas!$C$36,0,MIN(${c}31,${c}35+${p}38))`,5);
+    mo.fx(38,C0+m,`${p}38+${c}35-${c}36-${c}37`,5);
+    mo.fx(39,C0+m,`${c}31-${c}37`,5);
+    mo.fx(40,C0+m,`${p}62`,5);
+    mo.fx(41,C0+m,`${c}40*(((1+Premissas!$C$28)*(1+Premissas!$C$39))^(${c}8/252)-1)`,5);
+    mo.fx(42,C0+m,`IF(${c}6<=Premissas!$C$41,${c}41,0)`,5);
+    mo.fx(43,C0+m,`IF(${c}6<=Premissas!$C$41,0,MIN(${c}39,${c}41+${p}44))`,5);
+    mo.fx(44,C0+m,`${p}44+${c}41-${c}42-${c}43`,5);
+    mo.fx(45,C0+m,`${c}39-${c}43`,5);
+    mo.fx(48,C0+m,`IF(${c}6>=${PZ},0,Premissas!$C$48*${c}23)`,5);
+    mo.fx(49,C0+m,`MIN(${c}45,${c}18)`,21);
+    mo.fx(50,C0+m,`${c}45-${c}49`,5);
+    mo.fx(51,C0+m,`MAX(0,${c}50-${c}48)`,5);
+    mo.fx(52,C0+m,`IF(AND(Premissas!$C$19=1,${c}6<=Premissas!$C$20,${c}6<${PZ}),1,0)`,7);
+    mo.fx(53,C0+m,`${c}52*${c}51`,21);
+    mo.fx(54,C0+m,`${c}49+${c}53`,21);
+    mo.fx(55,C0+m,`Carteira!${c}13`,9);
+    mo.fx(56,C0+m,`${c}50-${c}53`,5);
+    mo.fx(59,C0+m,`IF(OR(AND(${c}6>Premissas!$C$37,OR(Premissas!$C$19=0,${c}6>Premissas!$C$20)),${c}6>=${PZ}),MIN(MAX(0,${c}56-${c}48),${c}34+${c}36),0)`,5);
+    mo.fx(60,C0+m,`${c}34+${c}36-${c}59+${c}20`,5);
+    mo.fx(61,C0+m,`IF(OR(AND(${c}60=0,${c}38=0,${c}6>Premissas!$C$42,OR(Premissas!$C$19=0,${c}6>Premissas!$C$20)),AND(${c}6>=${PZ},${c}60=0)),MIN(MAX(0,${c}56-${c}48-${c}59),${c}40+${c}42),0)`,5);
+    mo.fx(62,C0+m,`${c}40+${c}42-${c}61+${c}21`,5);
+    mo.fx(63,C0+m,`${c}56-${c}59-${c}61`,5);
+    mo.fx(66,C0+m,`IF(OR(${c}6>=${PZ},AND(${c}60=0,${c}38=0,${c}62=0,${c}44=0)),${c}63,0)`,5);
+    mo.fx(67,C0+m,`${c}63-${c}66`,17);
+    mo.fx(70,C0+m,`IF(${c}6>=${PZ},${c}67,Carteira!${c}32+${c}67)`,9);
+    mo.fx(71,C0+m,`${c}70-${c}60-${c}38`,5);
+    mo.fx(72,C0+m,`${c}71-${c}62`,5);
+    mo.fx(73,C0+m,`IF(${c}70=0,"",${c}71/${c}70)`,6);
+    mo.fx(74,C0+m,'Premissas!$C$44',10);
+    mo.fx(76,C0+m,`ABS(${c}15-${c}30-${c}37-${c}43-${c}49-${c}53-${c}59-${c}61-${c}66-${c}67)<0.01`,19);
+    mo.fx(85,C0+m,`IF(${c}60+${c}38<=0,"",${c}70/(${c}60+${c}38))`,20);
+    mo.fx(86,C0+m,`IF(${c}60+${c}38+${c}62+${c}44<=0,"",${c}70/(${c}60+${c}38+${c}62+${c}44))`,20);
+    mo.fx(87,C0+m,`IF(Carteira!${c}27<=0,"",(Carteira!${c}28-Carteira!${c}21+Carteira!${c}23)/Carteira!${c}27)`,6);
+    mo.fx(88,C0+m,`IF(${c}34+${c}40<=0,"",(${c}35+${c}41)/(${c}34+${c}40))`,6);
+    mo.fx(89,C0+m,`IF(OR(${c}87="",${c}88=""),"",${c}87-${c}88)`,6);
+  }
+
+  /* ---- DRE ---- */
+  const dre=Sheet('DRE'); sheets.push(dre);
+  const MS=11; // K
+  dre.cols=[[1,1,3],[2,2,50],[3,9,13],[10,10,2]];
+  for(let m=1;m<=M;m++)dre.cols.push([MS+m-1,MS+m-1,11]);
+  dre.freeze=[7,10];
+  dre.str(2,2,'DRE DO FUNDO — MENSAL COM CONSOLIDAÇÃO ANUAL',16);
+  dre.str(3,2,'Em R$ mil | Regime de competência',14);
+  dre.str(5,3,'Total',15);
+  for(let a=1;a<=7;a++)dre.str(5,3+a,'Ano '+a,15);
+  dre.str(6,2,'Data',13); dre.str(7,2,'Dias úteis do mês',12);
+  const dcol=m=>colL(MS+m-1);
+  for(let m=1;m<=M;m++){
+    dre.fx(5,MS+m-1,`Carteira!${col(m)}6`,28);
+    dre.fx(6,MS+m-1,`Carteira!${col(m)}7`,11);
+    dre.fx(7,MS+m-1,`Carteira!${col(m)}8`,24);
+  }
+  dre.fx(7,3,'SUM(D7:J7)',7);
+  for(let a=1;a<=7;a++)dre.fx(7,3+a,`SUM(${dcol(12*(a-1)+1)}7:${dcol(Math.min(12*a,M))}7)`,7);
+  const dlines=[[9,'Apropriação de rendimento da carteira (unwind)','Carteira',28,1],
+    [10,'(−) Perdas de crédito (inadimplência)','Carteira',21,-1],
+    [11,'(+) Recuperações de crédito','Carteira',23,1],
+    [12,'(+) Rendimento de aplicações (caixa)','Modelo',13,1],
+    [14,'(−) Taxa de administração','Modelo',26,-1],
+    [15,'(−) Taxa de gestão','Modelo',27,-1],
+    [16,'(−) Taxa de custódia','Modelo',28,-1],
+    [17,'(−) Despesas fixas','Modelo',29,-1],
+    [19,'(−) Remuneração Cota Sênior (competência)','Modelo',35,-1],
+    [20,'(−) Remuneração Cota Mezanino (competência)','Modelo',41,-1]];
+  dlines.forEach(([r,t,sh,src,sg])=>{
+    dre.str(r,2,t,12);
+    for(let m=1;m<=M;m++)dre.fx(r,MS+m-1,(sg>0?'':'-')+`${sh}!${col(m)}${src}`,9);
+    for(let a=1;a<=7;a++)dre.fx(r,3+a,`SUM(${dcol(12*(a-1)+1)}${r}:${dcol(Math.min(12*a,M))}${r})`,5);
+    dre.fx(r,3,`SUM(D${r}:J${r})`,21);
+  });
+  [[13,'(=) Receita líquida do fundo'],[18,'(=) Resultado do fundo (antes das cotas)'],[21,'(=) Resultado atribuível à Cota Subordinada']]
+    .forEach(([r,t])=>dre.str(r,2,t,13));
+  dre.str(23,2,'Memo: retorno s/ capital total aportado na Subordinada (%)',14);
+  const allC=[3,...Array.from({length:7},(_,k)=>4+k),...Array.from({length:M},(_,i)=>MS+i)];
+  allC.forEach(ci=>{
+    const cc=colL(ci);
+    dre.fx(13,ci,`SUM(${cc}9:${cc}12)`,5);
+    dre.fx(18,ci,`${cc}13+SUM(${cc}14:${cc}17)`,5);
+    dre.fx(21,ci,`${cc}18+${cc}19+${cc}20`,17);
+    dre.fx(23,ci,`${cc}21/Modelo!$C$81`,6);
+  });
+
+  /* ---- Rentabilidade ---- */
+  const rn=Sheet('Rentabilidade'); sheets.push(rn);
+  rn.cols=[[1,1,3],[2,2,50],[3,3,14]]; for(let m=1;m<=M;m++)rn.cols.push([C0+m,C0+m,11]);
+  rn.freeze=[8,3];
+  rn.str(2,2,'RENTABILIDADE POR CLASSE DE COTA',16);
+  rn.str(3,2,'Em R$ mil | Fluxos efetivos: aportes negativos, distribuições positivas | XIRR anualizada',14);
+  rn.str(5,2,'FLUXOS DE CAIXA E RENTABILIDADE ACUMULADA POR COTA',15); for(let m=0;m<=M;m++)rn.str(5,C0+m,'',15);
+  rn.str(6,2,'Mês',13); rn.str(7,2,'Data',13); rn.str(8,2,'Dias úteis do mês',12);
+  for(let m=0;m<=M;m++){rn.fx(6,C0+m,`Carteira!${col(m)}6`,28); rn.fx(7,C0+m,`Carteira!${col(m)}7`,11); rn.fx(8,C0+m,`Carteira!${col(m)}8`,24);}
+  // CDI acumulado (benchmark)
+  rn.str(9,2,'CDI a.m.',12); rn.str(10,2,'CDI acumulado',13);
+  rn.fx(10,C0,'0',6);
+  for(let m=1;m<=M;m++){const c=col(m),p=col(m-1);
+    rn.fx(9,C0+m,`Premissas!$C$30`,6);
+    rn.fx(10,C0+m,`(1+${c}9)*(1+${p}10)-1`,6);
+  }
+  // Sênior: fluxo, PU, rent mês, rent acum
+  rn.str(12,2,'Fluxo Cota Sênior (aporte / juros + amortização)',13);
+  rn.str(13,2,'PU de competência (base 100%)',12);
+  rn.str(14,2,'Rentabilidade da cota (mês)',12);
+  rn.str(15,2,'Rentabilidade da cota acumulada',13);
+  rn.fx(12,C0,'-Premissas!$C$51',9); rn.fx(13,C0,'1',5); rn.fx(15,C0,'0',6);
+  // Mezanino
+  rn.str(17,2,'Fluxo Cota Mezanino',13);
+  rn.str(18,2,'PU de competência (base 100%)',12);
+  rn.str(19,2,'Rentabilidade da cota (mês)',12);
+  rn.str(20,2,'Rentabilidade da cota acumulada',13);
+  rn.fx(17,C0,'-Premissas!$C$52',9); rn.fx(18,C0,'1',5); rn.fx(20,C0,'0',6);
+  // Subordinada
+  rn.str(22,2,'Fluxo Cota Subordinada',13);
+  rn.str(23,2,'Rentabilidade da cota (mês) — resultado ÷ capital aportado',12);
+  rn.str(24,2,'Rentabilidade da cota acumulada',13);
+  rn.fx(22,C0,'-Premissas!$C$53',9); rn.fx(24,C0,'0',6);
+  for(let m=1;m<=M;m++){
+    const c=col(m),p=col(m-1);
+    rn.fx(12,C0+m,`Modelo!${c}37+Modelo!${c}59-Modelo!${c}20`,9);
+    rn.fx(13,C0+m,`${p}13*((1+Premissas!$C$28)*(1+Premissas!$C$34))^(${c}8/252)`,5);
+    rn.fx(14,C0+m,`${c}13/${p}13-1`,6);
+    rn.fx(15,C0+m,`(1+${c}14)*(1+${p}15)-1`,6);
+    rn.fx(17,C0+m,`Modelo!${c}43+Modelo!${c}61-Modelo!${c}21`,9);
+    rn.fx(18,C0+m,`${p}18*((1+Premissas!$C$28)*(1+Premissas!$C$39))^(${c}8/252)`,5);
+    rn.fx(19,C0+m,`${c}18/${p}18-1`,6);
+    rn.fx(20,C0+m,`(1+${c}19)*(1+${p}20)-1`,6);
+    rn.fx(22,C0+m,`Modelo!${c}66-Modelo!${c}22`,9);
+    rn.fx(23,C0+m,`DRE!${dcolK(m)}21/Modelo!$C$81`,6);
+    rn.fx(24,C0+m,`(1+${c}23)*(1+${p}24)-1`,6);
+  }
+  rn.str(27,2,'RESULTADOS',15); rn.str(27,3,'',15);
+  const rblk=(r0,nome,fr,spr)=>{
+    rn.str(r0,2,`TIR Cota ${nome} (a.a.)`,13);
+    rn.fx(r0,3,`IFERROR(XIRR(C${fr}:${LASTC}${fr},C7:${LASTC}7),"n/d")`,22);
+    rn.str(r0+1,2,spr?`Benchmark ${nome} (CDI + spread contratual, a.a.)`:'CDI de referência (a.a.)',12);
+    rn.fx(r0+1,3,spr?`(1+Premissas!$C$28)*(1+${spr})-1`:'Premissas!$C$28',10);
+    rn.str(r0+2,2,'Retorno realizado como CDI + spread (a.a.)',12);
+    rn.fx(r0+2,3,`IFERROR((1+C${r0})/(1+Premissas!$C$28)-1,"n/d")`,6);
+    rn.str(r0+3,2,'Retorno realizado como % do CDI',12);
+    rn.fx(r0+3,3,`IFERROR(C${r0}/Premissas!$C$28,"n/d")`,6);
+    rn.str(r0+4,2,'MOIC (retornos ÷ capital aportado)',12);
+    rn.fx(r0+4,3,`SUMIF(C${fr}:${LASTC}${fr},">0")/-SUMIF(C${fr}:${LASTC}${fr},"<0")`,20);
+  };
+  rn.str(28,2,'— SÊNIOR —',13); rblk(29,'Sênior',12,'Premissas!$C$34');
+  rn.str(35,2,'— MEZANINO —',13); rblk(36,'Mezanino',17,'Premissas!$C$39');
+  rn.str(42,2,'— SUBORDINADA —',13); rblk(43,'Subordinada',22,null);
+  rn.str(49,2,'Duration de caixa da Sênior (meses até quitação)',12);
+  rn.fx(49,3,`IFERROR(MATCH(TRUE,INDEX(Modelo!D60:${LASTC}60<0.01,0),0),"n/d")`,7);
+  rn.str(50,2,'WAL Sênior — prazo médio ponderado dos recebimentos (meses)',12);
+  rn.fx(50,3,`IFERROR(SUMPRODUCT((D12:${LASTC}12>0)*(D6:${LASTC}6)*(D12:${LASTC}12))/SUMIF(D12:${LASTC}12,">0"),"n/d")`,27);
+  rn.str(51,2,'WAL Mezanino (meses)',12);
+  rn.fx(51,3,`IFERROR(SUMPRODUCT((D17:${LASTC}17>0)*(D6:${LASTC}6)*(D17:${LASTC}17))/SUMIF(D17:${LASTC}17,">0"),"n/d")`,27);
+  rn.str(52,2,'WAL Subordinada (meses)',12);
+  rn.fx(52,3,`IFERROR(SUMPRODUCT((D22:${LASTC}22>0)*(D6:${LASTC}6)*(D22:${LASTC}22))/SUMIF(D22:${LASTC}22,">0"),"n/d")`,27);
+
+  /* ---- Sensibilidade ---- */
+  const se=Sheet('Sensibilidade'); sheets.push(se);
+  se.cols=[[1,1,3],[2,2,8],[3,3,15],[4,10,13]];
+  se.str(2,2,'ANÁLISE DE SENSIBILIDADE',16);
+  se.str(3,2,'Em R$ mil | Fórmulas fechadas — independem do cenário ativo',14);
+  se.str(5,2,'TABELA 1 — ÁGIO IMPLÍCITO SOBRE O VP (%) — consequência da taxa e do prazo',15);
+  for(let c=3;c<=8;c++)se.str(5,c,'',15);
+  se.str(7,3,'Taxa de cessão (a.m.) ↓ · Prazo (meses) →',14);
+  const przs=[12,24,36,48,60];
+  przs.forEach((p,j)=>se.num(9,4+j,p,3));
+  for(let i=0;i<9;i++){
+    const tx=0.014+0.001*i, r=10+i;
+    se.num(r,3,tx,2);
+    przs.forEach((p,j)=>se.fx(r,4+j,`PMT($C${r},${colL(4+j)}$9,-1)*${colL(4+j)}$9-1`,6));
+  }
+  se.str(21,2,'TABELA 2 — CONSUMO DO PL SUBORDINADO PELA PERDA LÍQUIDA (% do capital aportado na Sub)',15);
+  for(let c=3;c<=8;c++)se.str(21,c,'',15);
+  se.str(23,3,'Inadimplência ↓ · Recovery → (sobre a face TOTAL originada)',14);
+  const recs=[0,.25,.5,.75];
+  recs.forEach((rv,j)=>se.num(25,4+j,rv,2));
+  for(let i=0;i<=10;i++){
+    const r=26+i;
+    se.num(r,3,0.01*i,2);
+    recs.forEach((rv,j)=>se.fx(r,4+j,`Carteira!$C$35*$C${r}*(1-${colL(4+j)}$25)/Modelo!$C$81`,6));
+  }
+  se.str(39,2,'BREAKEVEN DA COTA SÊNIOR',15); for(let c=3;c<=8;c++)se.str(39,c,'',15);
+  se.str(40,3,'Inadimplência máxima absorvida antes de atingir a Sênior (sem recovery):',12);
+  se.fx(40,8,'(Modelo!$C$81+Modelo!$C$80+Carteira!$C$35-Carteira!$C$34)/Carteira!$C$35',22);
+  se.str(42,2,'BREAKEVENS RESOLVIDOS POR BISSEÇÃO SOBRE A ENGINE',15); for(let c=3;c<=8;c++)se.str(42,c,'',15);
+  se.str(43,3,'Calculados na geração do arquivo às premissas então vigentes (inad flat; valores estáticos — não recalculam ao girar o switch):',14);
+  const beRow=(r,t,v)=>{ se.str(r,3,t,12); if(v===undefined) se.str(r,8,'n/d',12); else if(v===null) se.str(r,8,'> 90%',13); else se.num(r,8,v,22); };
+  beRow(44,'Inadimplência que zera a TIR da Subordinada', BE?BE.beT:undefined);
+  beRow(45,'Inadimplência que rompe o covenant de subordinação', BE?BE.beC:undefined);
+  beRow(46,'Inadimplência que compromete a quitação integral da Sênior', BE?BE.beS:undefined);
+
+  /* ---- Cenários ---- */
+  const ce=Sheet('Cenários'); sheets.push(ce);
+  ce.cols=[[1,1,3],[2,2,50],[3,6,15]];
+  ce.str(2,2,'CENÁRIOS — BASE · OTIMISTA · PESSIMISTA',16);
+  ce.str(3,2,'Gire o switch em Premissas!C6 para recalcular todo o modelo',14);
+  ce.str(5,2,'PREMISSAS POR CENÁRIO',15); ce.str(5,3,'',15);
+  ['Base (1)','Otimista (2)','Pessimista (3)'].forEach((h,i)=>ce.str(5,4+i,h,15));
+  [['Inadimplência (% dos recebimentos)',23],['Recovery rate',24],['CDI (% a.a.)',28]].forEach(([t,sr],k)=>{
+    ce.str(7+k,2,t,12);
+    ['D','E','F'].forEach((cc,i)=>ce.fx(7+k,4+i,`Premissas!$${cc}$${sr}`,10));
+  });
+  ce.str(12,2,'OUTPUTS DO CENÁRIO ATIVO',15); for(let c=3;c<=6;c++)ce.str(12,c,'',15);
+  [['Cenário ativo','Premissas!$D$6',26],
+   ['TIR Cota Sênior (a.a.)','Rentabilidade!$C$29',10],
+   ['TIR Cota Mezanino (a.a.)','Rentabilidade!$C$36',10],
+   ['TIR Cota Subordinada (a.a.)','Rentabilidade!$C$43',10],
+   ['MOIC Subordinada','Rentabilidade!$C$47',25],
+   ['Volume total originado (VP)','Carteira!$C$34',9],
+   ['Múltiplo de reciclagem do capital','Carteira!$C$37',25],
+   ['Resultado acumulado da Subordinada','DRE!$C$21',9],
+   [`Razão de subordinação mínima no período`,`MIN(Modelo!C73:${LASTC}73)`,10],
+   ['Perda de crédito líquida acumulada',`SUM(Carteira!D21:${LASTC}21)-SUM(Carteira!D23:${LASTC}23)`,9]]
+   .forEach(([t,f,s],k)=>{ce.str(13+k,2,t,12);ce.fx(13+k,3,f,s);});
+  ce.str(23,2,'COMPARATIVO DOS 3 CENÁRIOS — LADO A LADO',15); for(let c=3;c<=6;c++)ce.str(23,c,'',15);
+  ce.str(24,2,'Valores estáticos calculados na geração do arquivo (engine idêntica); o modelo vivo recalcula pelo switch em Premissas!C6.',14);
+  ['Base','Otimista','Pessimista'].forEach((h,i)=>ce.str(25,4+i,h,15));
+  if(CEN&&CEN.length===3){
+    const cmpRows=[
+      ['Inadimplência do cenário', c=>c.inad, 6],
+      ['Recovery rate', c=>c.rec, 6],
+      ['CDI (a.a.)', c=>c.cdi, 6],
+      ['TIR Cota Sênior (a.a.)', c=>c.tirS, 22],
+      ['TIR Cota Mezanino (a.a.)', c=>c.tirM, 22],
+      ['TIR Cota Subordinada (a.a.)', c=>c.tirB, 22],
+      ['MOIC Subordinada', c=>c.moicB, 20],
+      ['Subordinação mínima no período', c=>c.subMin, 6],
+      ['Sênior quitada no mês', c=>c.duraS, 7],
+      ['Perda de crédito líquida acumulada (R$ mil)', c=>c.perdaLiq, 5],
+    ];
+    cmpRows.forEach(([t,fn,s],k)=>{
+      ce.str(26+k,2,t,12);
+      CEN.forEach((c,i)=>{ const v=fn(c); if(v==null) ce.str(26+k,4+i,'n/d',12); else ce.num(26+k,4+i,v,s); });
+    });
+  } else {
+    ce.str(26,2,'Comparativo indisponível nesta geração.',14);
+  }
+
+  /* ---- Sumário ---- */
+  const su=Sheet('Sumário'); sheets.push(su);
+  su.cols=[[1,1,3],[2,2,50],[3,7,15]];
+  su.str(2,2,'SUMÁRIO EXECUTIVO',16);
+  su.str(3,2,'Em R$ mil | Outputs do cenário ativo',14);
+  su.str(5,2,'ESTRUTURA DA EMISSÃO E APORTES',15);
+  ['PL inicial','Aportes adicionais','Total aportado','% do total','TIR realizada'].forEach((h,i)=>su.str(5,3+i,h,15));
+  [['Cota Sênior','Premissas!$C$51',20,'Modelo!$C$79','Rentabilidade!$C$29'],
+   ['Cota Mezanino','Premissas!$C$52',21,'Modelo!$C$80','Rentabilidade!$C$36'],
+   ['Cota Subordinada','Premissas!$C$53',22,'Modelo!$C$81','Rentabilidade!$C$43']].forEach(([n,pl,ap,tot,tir],k)=>{
+    const r=6+k;
+    su.str(r,2,n,12);
+    su.fx(r,3,pl,9);
+    su.fx(r,4,`SUM(Modelo!D${ap}:Modelo!${LASTC}${ap})`,9);
+    su.fx(r,5,tot,9);
+    su.fx(r,6,`${tot}/Modelo!$C$82`,10);
+    su.fx(r,7,tir,10);
+  });
+  su.str(9,2,'Total',13);
+  ['C','D','E'].forEach(cc=>su.fx(9,cc.charCodeAt(0)-64,`SUM(${cc}6:${cc}8)`,17));
+  su.str(11,2,'CARTEIRA, AQUISIÇÃO E REVOLVÊNCIA',15); for(let c=3;c<=7;c++)su.str(11,c,'',15);
+  [['VP de aquisição inicial (desembolso)','Premissas!$C$47',9],
+   ['Taxa de cessão (a.m.) — FIXA','Premissas!$C$12',10],
+   ['Face da carteira inicial (PMT × prazo)','Premissas!$C$15',9],
+   ['Ágio implícito da carteira inicial','Premissas!$C$16',10],
+   ['Período de revolvência (meses)','Premissas!$C$20',24],
+   ['Volume TOTAL originado no fundo (VP)','Carteira!$C$34',9],
+   ['Face TOTAL originada','Carteira!$C$35',9],
+   ['Ágio médio ponderado implícito','Carteira!$C$36',10],
+   ['Múltiplo de reciclagem (÷ capital aportado)','Carteira!$C$37',25],
+   ['PL médio total (mensal)',`AVERAGE(Modelo!$C$70:$${LASTC}$70)`,9],
+   ['PL máximo (mensal)',`MAX(Modelo!$C$70:$${LASTC}$70)`,9],
+   ['Prazo da carteira / prazo do fundo (meses)','Premissas!$C$11',24]].forEach(([t,f,s],k)=>{
+    su.str(13+k,2,t,12); su.fx(13+k,3,f,s);
+  });
+  su.fx(24,4,'Premissas!$C$63',24);
+  su.str(27,2,'RISCO & PROTEÇÕES',15); for(let c=3;c<=7;c++)su.str(27,c,'',15);
+  [['Razão de subordinação inicial (Sub+Mez)','Modelo!$C$73',10],
+   ['Razão de subordinação mínima no período',`MIN(Modelo!C73:${LASTC}73)`,10],
+   ['Subordinação mínima exigida','Premissas!$C$44',10],
+   ['Perda líquida acumulada projetada',`SUM(Carteira!D21:${LASTC}21)-SUM(Carteira!D23:${LASTC}23)`,9],
+   ['Breakeven de inadimplência da Sênior','Sensibilidade!$H$40',10],
+   ['Cobertura Sênior mínima (Ativo ÷ Sênior devido)',`MIN(Modelo!C85:${LASTC}85)`,25],
+   ['Excess spread médio (a.m.)',`AVERAGEIF(Modelo!C89:${LASTC}89,">-1")`,10],
+   ['WAL Sênior (meses)','Rentabilidade!$C$50',24],
+   ['WAL Mezanino (meses)','Rentabilidade!$C$51',24],
+   ['WAL Subordinada (meses)','Rentabilidade!$C$52',24]].forEach(([t,f,s],k)=>{
+    su.str(28+k,2,t,12); su.fx(28+k,3,f,s);
+  });
+  su.str(39,2,'CHECKS DE INTEGRIDADE',15); for(let c=3;c<=7;c++)su.str(39,c,'',15);
+  [['VP da carteira zera no vencimento do fundo','Carteira!$C$38'],
+   ['Cascata fecha em todos os meses',`COUNTIF(Modelo!C76:${LASTC}76,FALSE)=0`],
+   ['Sênior integralmente quitada no vencimento',`ABS(INDEX(Modelo!C60:${LASTC}60,1,Premissas!$C$63+1))+ABS(INDEX(Modelo!C38:${LASTC}38,1,Premissas!$C$63+1))<0.01`],
+   ['Soma das safras reconcilia com o saldo a VP','Carteira!$C$39'],
+   ['Revolvência menor que o prazo do fundo','Premissas!$C$65']].forEach(([t,f],k)=>{
+    su.str(40+k,2,t,12); su.fx(40+k,3,f,19);
+  });
+
+  return sheets;
+}
+
+/* ---------- montagem do pacote ---------- */
+async function genXlsx(P, holidays, cessArr, JSZipRef, extras){
+  const sheets=buildWorkbook(P,holidays,cessArr,extras);
+  const zip=new JSZipRef();
+  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}
+</Types>`);
+  zip.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`);
+  zip.file('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${sheets.map((s,i)=>`<sheet name="${esc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets>
+<calcPr calcId="171027" fullCalcOnLoad="1"/>
+</workbook>`);
+  zip.file('xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}
+<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`);
+  zip.file('xl/styles.xml',stylesXml());
+  sheets.forEach((s,i)=>zip.file(`xl/worksheets/sheet${i+1}.xml`,sheetXml(s)));
+  return zip;
+}
+window.__genXlsxCore = genXlsx;
+
+(function(){
+  const btn=document.getElementById('btnXlsx');
+  if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    if(typeof JSZip==='undefined'){ alert('Biblioteca de compactação não carregou — verifique a conexão e recarregue a página.'); return; }
+    const orig=btn.textContent; btn.disabled=true; btn.textContent='Gerando…';
+    try{
+      const holArr=Array.from(HOLIDAYS).sort();
+      const cess=buildCess(P,MAXM);
+      const beX=solveBE(P);
+      const cenX=[1,2,3].map(k=>{const s=SCEN[k];const q=run({...P,inad:s.inad,rec:s.rec,cdi:s.cdi});
+        return {nome:s.nome,inad:s.inad,rec:s.rec,cdi:s.cdi,tirS:q.R.tirS,tirM:q.R.tirM,tirB:q.R.tirB,moicB:q.R.moicB,subMin:q.R.subMin,duraS:q.R.duraS,perdaLiq:q.R.perdaLiq};});
+      const zip=await window.__genXlsxCore(P, holArr, cess, JSZip, {be:beX, cen:cenX});
+      const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const cen=({1:'Base',2:'Otimista',3:'Pessimista'})[P.cen]||'Custom';
+      a.href=url; a.download='Modelo_FIDC_Carteira_Recebiveis_'+cen+'.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),4000);
+      btn.textContent='✓ Baixado'; btn.classList.add('done');
+      setTimeout(()=>{btn.textContent=orig; btn.classList.remove('done'); btn.disabled=false;},2200);
+    }catch(e){
+      console.error(e); btn.textContent='Erro ao gerar'; 
+      setTimeout(()=>{btn.textContent=orig; btn.disabled=false;},2500);
+    }
+  });
+})();
+
+</script>
+</body>
+</html>
